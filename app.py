@@ -114,7 +114,6 @@ try:
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     
     with col_f1:
-        # Sắp xếp danh sách năm an toàn (chuyển toàn bộ về chuỗi)
         raw_nams = [str(x) for x in df['Nam_Dat_Hang'].unique() if str(x) not in ['', 'nan', 'None']]
         nam_list = ['Tất cả các năm'] + sorted(raw_nams)
         nam_sel = st.selectbox("📅 Chọn Năm (Cột D)", nam_list, index=0)
@@ -164,12 +163,16 @@ try:
             else:
                 df_tab = df_filtered[df_filtered['Nhom_SP'] == tab_name]
 
-            # 5. CÁC THẺ CON SỐ TỔNG QUAN
+            # 5. CÁC THẺ CON SỐ TỔNG QUAN (SỬA LỖI ĐỊNH DẠNG SỐ)
+            total_so_luong = df_tab['So_Luong'].sum()
+            total_nhap_kho = df_tab['SL_Nhap_Kho'].sum()
+            total_ton_kho = df_tab['SL_Ton_Kho'].sum()
+
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Tổng Số Đơn", f"{len(df_tab)} Đơn")
-            m2.metric("📦 Tổng SL Đặt Hàng", f"{df_tab['So_Luong'].sum():,:g}")
-            m3.metric("✅ Tổng SL Nhập Kho", f"{df_tab['SL_Nhap_Kho'].sum():,:g}")
-            m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{df_tab['SL_Ton_Kho'].sum():,:g}")
+            m2.metric("📦 Tổng SL Đặt Hàng", f"{total_so_luong:,.0f}")
+            m3.metric("✅ Tổng SL Nhập Kho", f"{total_nhap_kho:,.0f}")
+            m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{total_ton_kho:,.0f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
