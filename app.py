@@ -19,10 +19,14 @@ st.title("🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG")
 def clean_number_exact(val):
     if pd.isna(val) or val is None:
         return 0.0
-    val_str = str(val).strip().replace('\xa0', '').replace(' ', '')
+    
+    # Loại bỏ triệt để khoảng trắng thông thường và ký tự khoảng trắng không ngắt dòng (\xa0)
+    val_str = str(val).replace('\xa0', '').replace(' ', '').strip()
+    
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
 
+    # Xử lý định dạng dấu phẩy/dấu chấm thập phân
     if ',' in val_str and '.' in val_str:
         if val_str.rfind(',') > val_str.rfind('.'):
             val_str = val_str.replace('.', '').replace(',', '.')
@@ -203,10 +207,12 @@ try:
     df_filtered['Is_Dat_Hang_Valid'] = cond_dh_nam & cond_dh_ky
     df_filtered['Is_Nhap_Kho_Valid'] = df_filtered['Ngay_Nhap_Kho_DT'].notna() & cond_nk_nam & cond_nk_ky
 
+    # Tính toán chính xác số lượng hiển thị cho kỳ báo cáo được chọn
     df_filtered['SL_Dat_Hang_Display'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Dat_Hang_Valid'], 0.0)
     df_filtered['SL_Nhap_Kho_Display'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Nhap_Kho_Valid'], 0.0)
     df_filtered['SL_Ton_Kho_Display'] = df_filtered['SL_Dat_Hang_Display'] - df_filtered['SL_Nhap_Kho_Display']
 
+    # Chỉ hiển thị các đơn hàng thuộc kỳ Đặt Hàng hoặc kỳ Nhập Kho tương ứng
     df_display = df_filtered[df_filtered['Is_Dat_Hang_Valid'] | df_filtered['Is_Nhap_Kho_Valid']].copy()
 
     st.markdown("---")
