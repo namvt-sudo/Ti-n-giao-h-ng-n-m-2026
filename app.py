@@ -3,7 +3,7 @@ import pandas as pd
 import re
 
 # -----------------------------------------------------------------------------
-# 1. CẤU HÌNH TRANG WEB & TỐI ƯU CSS (GIAO DIỆN HIỆN ĐẠI)
+# 1. CẤU HÌNH TRANG WEB & TỐI ƯU CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="VHIP - Quản Lý Tiến Độ Đơn Hàng", 
@@ -14,10 +14,8 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* Bố cục & Spacing */
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
     
-    /* Custom Card Metric */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         padding: 16px 20px;
@@ -40,7 +38,6 @@ st.markdown("""
         color: #212529;
     }
 
-    /* Custom Style Cho Tab Header */
     div[data-baseweb="tab-list"] {
         gap: 10px;
         border-bottom: 1px solid #dee2e6;
@@ -77,10 +74,6 @@ def get_ggs_export_url(url):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
 def clean_number_exact(val):
-    """
-    Hàm chuẩn hóa chuỗi số về kiểu float an toàn.
-    Xử lý thông minh dấu phân cách hàng nghìn (, hoặc .) và dấu thập phân.
-    """
     if pd.isna(val) or val is None:
         return 0.0
     val_str = str(val).strip().replace('\xa0', '').replace(' ', '')
@@ -114,11 +107,8 @@ def clean_number_exact(val):
 @st.cache_data(ttl=60, show_spinner="Đang đồng bộ dữ liệu từ Google Sheets...")
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
-    
-    # Đọc tất cả dòng dưới dạng string để tránh lỗi định dạng tự động của Pandas
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
 
-    # Đọc từ dòng index 4 (Dòng 5 Excel)
     df = pd.DataFrame({
         'So_DH_Raw': df_raw.iloc[4:, 1],              # Cột B
         'Trang_Thai_SX': df_raw.iloc[4:, 2],          # Cột C
@@ -132,17 +122,17 @@ def load_data():
         'So_Luong_Tong_DH_Raw': df_raw.iloc[4:, 13]  # Cột N
     })
 
-    # Đọc cột ngày
+    # Đọc các cột ngày
     df['Ngay_Duyet_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, 27], dayfirst=True, errors='coerce')    # AB
     df['Ngay_YCGH_DT'] = pd.to_datetime(df_raw.iloc[4:, 28], dayfirst=True, errors='coerce')        # AC
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
-    df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
+    df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH (Cột Nhập Kho JSC)
 
-    # Tự động điền dữ liệu cho các ô gộp Merge Center (ffill)
+    # Tự động điền dữ liệu gộp ô (ffill)
     df['So_DH'] = df['So_DH_Raw'].replace('', None).ffill()
     df['Nam_Col_D'] = df['Nam_Dat_Hang_Raw'].replace('', None).ffill().astype(str).str.extract(r'(\d{4})')[0]
 
-    # Loại bỏ dòng tiêu đề lặp hoặc dòng tổng
+    # Loại bỏ dòng không hợp lệ
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
 
@@ -150,15 +140,21 @@ def load_data():
     df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_exact)
     df = df[df['So_Luong_Tong_DH'] > 0]
 
-    # Trích xuất Năm
+    # Trích xuất Năm Đặt Hàng (Cột D / Ngày Duyệt / Ngày Chốt)
     df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Dat_Hang'] = df['Nam_Col_D'].fillna(df['Nam_Duyet']).fillna(df['Nam_Chot']).fillna('Khác')
 
-    # Làm sạch văn bản
+    # Trích xuất Năm / Tháng / Quý Nhập Kho thực tế từ Cột AH
+    df['Nam_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
+    df['Thang_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.month
+    df['Quy_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.quarter
+
+    # Làm sạch văn bản & Ghép chuỗi tìm kiếm
     df['Nhom_SP_Clean'] = df['Nhom_SP'].fillna('').astype(str).str.strip()
     df['Quy_Cach_Clean'] = df['Quy_Cach'].fillna('').astype(str).str.strip()
     df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
+    df['Full_Text_Search'] = df['Nhom_SP_Clean'] + ' ' + df['Quy_Cach_Clean']
 
     # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
@@ -166,12 +162,7 @@ def load_data():
     df['Ngay_Chot_Cuoi'] = df['Ngay_Chot_Cuoi_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.strftime('%d/%m/%Y').fillna('-')
 
-    # Tính toán Nhập kho / Tồn kho (Dùng numpy/vectorization tối ưu tốc độ)
-    df['Da_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].notna()
-    df['SL_Nhap_Kho'] = df['So_Luong_Tong_DH'].where(df['Da_Nhap_Kho'], 0.0)
-    df['SL_Ton_Kho'] = df['So_Luong_Tong_DH'] - df['SL_Nhap_Kho']
-
-    # Phân loại Tháng/Quý
+    # Phân loại Tháng/Quý của Đặt Hàng
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month.fillna(df['Ngay_Duyet_DH_DT'].dt.month)
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter.fillna(df['Ngay_Duyet_DH_DT'].dt.quarter)
 
@@ -183,7 +174,6 @@ def load_data():
 try:
     df = load_data()
 
-    # Bộ lọc Thời gian & Bộ phận
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
     with col_f1:
@@ -208,74 +198,100 @@ try:
         bp_list = ['Tất cả bộ phận'] + sorted(raw_bps)
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
-    # Thực thi lọc dữ liệu
+    # -------------------------------------------------------------------------
+    # 4. LOGIC LỌC ĐẶC THỤ: TÁCH BIỆT ĐẶT HÀNG & NHẬP KHO CỘT AH
+    # -------------------------------------------------------------------------
     df_filtered = df.copy()
 
-    if nam_sel != 'Tất cả các năm':
-        df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'] == nam_sel]
-
-    if ky_sel == "Theo Tháng":
-        df_filtered = df_filtered[df_filtered['Thang_Chot'] == thang_sel]
-    elif ky_sel == "Theo Quý":
-        df_filtered = df_filtered[df_filtered['Quy_Chot'] == quy_sel]
-    elif ky_sel == "6 Tháng Đầu Năm":
-        df_filtered = df_filtered[df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])]
-    elif ky_sel == "6 Tháng Cuối Năm":
-        df_filtered = df_filtered[df_filtered['Thang_Chot'].isin([7, 8, 9, 10, 11, 12])]
-
+    # Bộ lọc Bộ phận (Áp dụng chung)
     if bp_sel != 'Tất cả bộ phận':
         df_filtered = df_filtered[df_filtered['Bo_Phan_KD'] == bp_sel]
+
+    # Điều kiện Lọc Đặt Hàng theo Năm & Kỳ
+    cond_dh_nam = (df_filtered['Nam_Dat_Hang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+
+    # Điều kiện Lọc Nhập Kho theo Cột AH (Ngày thực tế nhập kho JSC)
+    cond_nk_nam = (df_filtered['Nam_Nhap_Kho'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+
+    if ky_sel == "Theo Tháng":
+        cond_dh_ky = df_filtered['Thang_Chot'] == thang_sel
+        cond_nk_ky = df_filtered['Thang_Nhap_Kho'] == thang_sel
+    elif ky_sel == "Theo Quý":
+        cond_dh_ky = df_filtered['Quy_Chot'] == quy_sel
+        cond_nk_ky = df_filtered['Quy_Nhap_Kho'] == quy_sel
+    elif ky_sel == "6 Tháng Đầu Năm":
+        cond_dh_ky = df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])
+        cond_nk_ky = df_filtered['Thang_Nhap_Kho'].isin([1, 2, 3, 4, 5, 6])
+    elif ky_sel == "6 Tháng Cuối Năm":
+        cond_dh_ky = df_filtered['Thang_Chot'].isin([7, 8, 9, 10, 11, 12])
+        cond_nk_ky = df_filtered['Thang_Nhap_Kho'].isin([7, 8, 9, 10, 11, 12])
+    else:
+        cond_dh_ky = True
+        cond_nk_ky = True
+
+    # Tính toán chính xác hai chỉ số:
+    # 1. Đặt hàng: Đơn thuộc năm/kỳ chọn
+    df_filtered['Is_Dat_Hang_Thuoc_Ky'] = cond_dh_nam & cond_dh_ky
+    
+    # 2. Nhập kho: Có ngày nhập ở Cột AH VÀ Ngày đó thuộc năm/kỳ chọn
+    df_filtered['Is_Nhap_Kho_Thuoc_Ky'] = df_filtered['Ngay_Nhap_Kho_DT'].notna() & cond_nk_nam & cond_nk_ky
+
+    # Gán số lượng tương ứng
+    df_filtered['SL_Dat_Hang_Kỳ'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Dat_Hang_Thuoc_Ky'], 0.0)
+    df_filtered['SL_Nhap_Kho'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Nhap_Kho_Thuoc_Ky'], 0.0)
+    df_filtered['SL_Ton_Kho'] = df_filtered['SL_Dat_Hang_Kỳ'] - df_filtered['SL_Nhap_Kho']
+
+    # Chỉ giữ lại dòng có phát sinh Đặt hàng hoặc Nhập kho trong kỳ chọn
+    df_display = df_filtered[df_filtered['Is_Dat_Hang_Thuoc_Ky'] | df_filtered['Is_Nhap_Kho_Thuoc_Ky']].copy()
 
     st.markdown("---")
 
     # -------------------------------------------------------------------------
-    # 4. DANH SÁCH TAB & PHÂN LOẠI SẢN PHẨM
+    # 5. HIỂN THỊ CÁC TAB SẢN PHẨM
     # -------------------------------------------------------------------------
     nhom_sp_list = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Hệ Cột + Phụ Kiện', '📋 Nhóm Khác']
     tabs = st.tabs(nhom_sp_list)
 
-    # Regex khớp chính xác các nhóm theo từ khóa Tiếng Việt
-    kw_goi_chau = r'Gối|Chậu'
-    kw_khe_luoc = r'Khe|Lược'
-    kw_tam_vco  = r'Tấm|VCO'
-    kw_cot_pk   = r'Cột|Phụ Kiện'
-    kw_loai_tru = r'Gối|Chậu|Khe|Lược|Tấm|VCO|Cột|Phụ Kiện'
+    kw_goi_chau = r'Gối|Goi|Chậu|Chau|Bearing|Pot|Pots|Gối cao su|Gối cầu|Gối chậu'
+    kw_khe_luoc = r'Khe|Lược|Luoc|Expansion|Co giãn'
+    kw_tam_vco  = r'Tấm|Tam|VCO'
+    kw_cot_pk   = r'Cột|Cot|Phụ Kiện|Phu Kien|Thiết bị'
+    kw_loai_tru = f"({kw_goi_chau})|({kw_khe_luoc})|({kw_tam_vco})|({kw_cot_pk})"
 
     cols_show = [
-        'So_DH', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong_Tong_DH', 'DVT',
+        'So_DH', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'SL_Dat_Hang_Kỳ', 'DVT',
         'SL_Nhap_Kho', 'SL_Ton_Kho', 'Ngay_Duyet_DH', 'Ngay_YCGH', 'Ngay_Chot_Cuoi', 'Ngay_Nhap_Kho'
     ]
 
     for i, tab_name in enumerate(nhom_sp_list):
         with tabs[i]:
-            # Lọc theo Tab tương ứng
             if tab_name == '📊 Dashboard Tổng':
-                df_tab = df_filtered.copy()
+                df_tab = df_display.copy()
             elif tab_name == '📦 Gối Chậu':
-                df_tab = df_filtered[df_filtered['Nhom_SP_Clean'].str.contains(kw_goi_chau, case=False, na=False)]
+                df_tab = df_display[df_display['Full_Text_Search'].str.contains(kw_goi_chau, case=False, na=False)]
             elif tab_name == '⚙️ Khe Răng Lược':
-                df_tab = df_filtered[df_filtered['Nhom_SP_Clean'].str.contains(kw_khe_luoc, case=False, na=False)]
+                df_tab = df_display[df_display['Full_Text_Search'].str.contains(kw_khe_luoc, case=False, na=False)]
             elif tab_name == '🧱 Tấm VCO':
-                df_tab = df_filtered[df_filtered['Nhom_SP_Clean'].str.contains(kw_tam_vco, case=False, na=False)]
+                df_tab = df_display[df_display['Full_Text_Search'].str.contains(kw_tam_vco, case=False, na=False)]
             elif tab_name == '🏗️ Hệ Cột + Phụ Kiện':
-                df_tab = df_filtered[df_filtered['Nhom_SP_Clean'].str.contains(kw_cot_pk, case=False, na=False)]
+                df_tab = df_display[df_display['Full_Text_Search'].str.contains(kw_cot_pk, case=False, na=False)]
             else:
-                df_tab = df_filtered[~df_filtered['Nhom_SP_Clean'].str.contains(kw_loai_tru, case=False, na=False)]
+                df_tab = df_display[~df_display['Full_Text_Search'].str.contains(kw_loai_tru, case=False, na=False)]
 
-            # 5. HIỂN THỊ METRIC TỔNG SỐ LƯỢNG
-            total_so_luong = df_tab['So_Luong_Tong_DH'].sum()
+            # METRIC TÍNH TOÁN
+            total_so_luong = df_tab['SL_Dat_Hang_Kỳ'].sum()
             total_nhap_kho = df_tab['SL_Nhap_Kho'].sum()
             total_ton_kho  = df_tab['SL_Ton_Kho'].sum()
 
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Tổng Dòng / Đơn", f"{len(df_tab):,} Dòng")
-            m2.metric("📦 Số lượng tổng ĐH", f"{total_so_luong:,.0f}")
-            m3.metric("✅ Đã Nhập Kho", f"{total_nhap_kho:,.0f}")
+            m2.metric("📦 Số lượng Đặt Hàng (Theo Kỳ)", f"{total_so_luong:,.0f}")
+            m3.metric("✅ Thực Tế Nhập Kho (Cột AH)", f"{total_nhap_kho:,.0f}")
             m4.metric("⏳ Tồn Cần Sản Xuất", f"{total_ton_kho:,.0f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # 6. Ô TÌM KIẾM THEO TAB
+            # SEARCH
             search_kw = st.text_input(f"🔍 Tìm kiếm nhanh trong [{tab_name}]:", key=f"search_{i}")
             if search_kw:
                 search_kw = search_kw.strip()
@@ -285,7 +301,7 @@ try:
                     df_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
 
-            # 7. BẢNG HIỂN THỊ CHI TIẾT
+            # BẢNG DỮ LIỆU
             st.dataframe(
                 df_tab[cols_show],
                 column_config={
@@ -294,14 +310,14 @@ try:
                     "Trang_Thai_SX": st.column_config.TextColumn("Trạng Thái (Cột C)"),
                     "Du_An": st.column_config.TextColumn("Dự Án"),
                     "Quy_Cach": st.column_config.TextColumn("Quy Cách Chủng Loại"),
-                    "So_Luong_Tong_DH": st.column_config.NumberColumn("Số lượng tổng ĐH", format="%,.0f"),
+                    "SL_Dat_Hang_Kỳ": st.column_config.NumberColumn("SL Đặt Hàng Kỳ Chọn", format="%,.0f"),
                     "DVT": st.column_config.TextColumn("ĐVT"),
-                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho", format="%,.0f"),
-                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn", format="%,.0f"),
+                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho (Cột AH)", format="%,.0f"),
+                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn Kỳ Chọn", format="%,.0f"),
                     "Ngay_Duyet_DH": st.column_config.TextColumn("1. Duyệt ĐH (AB)"),
                     "Ngay_YCGH": st.column_config.TextColumn("2. YCGH (AC)"),
                     "Ngay_Chot_Cuoi": st.column_config.TextColumn("3. Chốt Cuối (AG)"),
-                    "Ngay_Nhap_Kho": st.column_config.TextColumn("4. Nhập Kho (AH)")
+                    "Ngay_Nhap_Kho": st.column_config.TextColumn("4. Thực Tế Nhập Kho (AH)")
                 },
                 use_container_width=True,
                 hide_index=True,
