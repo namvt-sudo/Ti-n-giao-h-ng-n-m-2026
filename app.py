@@ -34,18 +34,18 @@ def get_ggs_export_url(url):
     gid = "984933238" # Tab Theo dõi ĐH
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
-# HÀM AN TOÀN CHUYỂN DỮ LIỆU SỐ CHUẨN XÁC
+# HÀM BÓC TÁCH SỐ LƯỢNG AN TOÀN TUYỆT ĐỐI
 def clean_number_exact(val):
     if pd.isna(val) or val is None:
         return 0.0
     val_str = str(val).strip()
-    if not val_str or val_str.lower() in ['nan', 'none', 'null', '-']:
+    if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
     
-    # Loại bỏ khoảng trắng không ngắt
+    # Loại bỏ ký tự khoảng trắng không ngắt
     val_str = val_str.replace('\xa0', '').replace(' ', '')
     
-    # Chuẩn hóa dấu phân cách thập phân
+    # Xử lý định dạng dấu phẩy/dấu chấm
     if ',' in val_str and '.' in val_str:
         if val_str.rfind(',') > val_str.rfind('.'): 
             val_str = val_str.replace('.', '').replace(',', '.')
@@ -62,11 +62,12 @@ def clean_number_exact(val):
 @st.cache_data(ttl=10)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
+    # Đọc tất cả các dòng dạng string
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
     
-    # Lấy dữ liệu từ dòng index 4 (dòng 5 Excel)
+    # Đọc dữ liệu từ dòng index 4 (dòng 5 Excel)
     df = pd.DataFrame({
-        'So_DH': df_raw.iloc[4:, 1],                  # Cột B
+        'So_DH_Raw': df_raw.iloc[4:, 1],              # Cột B
         'Trang_Thai_SX': df_raw.iloc[4:, 2],          # Cột C
         'Nam_Dat_Hang_Raw': df_raw.iloc[4:, 3],       # Cột D
         'Bo_Phan_KD': df_raw.iloc[4:, 4],             # Cột E
@@ -84,34 +85,37 @@ def load_data():
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
     df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
     
-    # Loại bỏ dòng trống hoặc dòng tiêu đề lặp
-    df['So_DH_Clean'] = df['So_DH'].fillna('').astype(str).str.strip()
-    df = df[df['So_DH_Clean'] != '']
-    df = df[~df['So_DH_Clean'].str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
+    # KỸ THUẬT QUAN TRỌNG: Tự động điền dữ liệu cho các ô gộp Merge Center (ffill)
+    df['So_DH'] = df['So_DH_Raw'].replace('', None).ffill()
+    df['Nam_Col_D'] = df['Nam_Dat_Hang_Raw'].replace('', None).ffill().astype(str).str.extract(r'(\d{4})')[0]
     
-    # Làm sạch chuỗi
+    # Bỏ dòng tiêu đề lặp lại hoặc dòng tổng
+    df = df[df['So_DH'].notna()]
+    df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
+    
+    # Chuyển đổi Số lượng
+    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_exact)
+    
+    # Lọc bỏ các dòng không có số lượng (tránh các dòng chú thích trống)
+    df = df[df['So_Luong_Tong_DH'] > 0]
+    
+    # Trích xuất Năm chuẩn xác
+    df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
+    df['Nam_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
+    df['Nam_Dat_Hang'] = df['Nam_Col_D'].fillna(df['Nam_Duyet']).fillna(df['Nam_Chot']).fillna('Khác')
+    
+    # Làm sạch văn bản
     df['Nhom_SP_Clean'] = df['Nhom_SP'].fillna('').astype(str).str.strip()
     df['Quy_Cach_Clean'] = df['Quy_Cach'].fillna('').astype(str).str.strip()
     df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
     
-    # Trích xuất NĂM chuẩn xác (Ưu tiên Cột D -> Ngày duyệt ĐH -> Ngày chốt)
-    df['Nam_Col_D'] = df['Nam_Dat_Hang_Raw'].fillna('').astype(str).str.extract(r'(\d{4})')[0]
-    df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
-    df['Nam_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
-    
-    # Gộp Năm ưu tiên
-    df['Nam_Dat_Hang'] = df['Nam_Col_D'].replace('', None).fillna(df['Nam_Duyet']).fillna(df['Nam_Chot']).fillna('Khác')
-    
-    # Chuyển đổi Số Lượng
-    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_exact)
-    
-    # Định dạng Ngày
+    # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_YCGH'] = df['Ngay_YCGH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Chot_Cuoi'] = df['Ngay_Chot_Cuoi_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     
-    # Tính số lượng nhập kho & tồn kho
+    # Tính số lượng đã nhập kho & tồn kho
     df['Da_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].notna()
     df['SL_Nhap_Kho'] = df.apply(lambda row: row['So_Luong_Tong_DH'] if row['Da_Nhap_Kho'] else 0.0, axis=1)
     df['SL_Ton_Kho'] = df['So_Luong_Tong_DH'] - df['SL_Nhap_Kho']
@@ -125,7 +129,7 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. BỘ LỌC
+    # 3. BỘ LỌC THỜI GIAN & NHÂN SỰ
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     
     with col_f1:
@@ -149,7 +153,7 @@ try:
         bp_list = ['Tất cả bộ phận'] + sorted(raw_bps)
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
-    # Lọc dữ liệu theo điều kiện
+    # Lọc dữ liệu
     df_filtered = df.copy()
     if nam_sel != 'Tất cả các năm':
         df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'] == nam_sel]
@@ -172,15 +176,14 @@ try:
     nhom_sp_list = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Hệ Cột + Phụ Kiện', '📋 Nhóm Khác']
     tabs = st.tabs(nhom_sp_list)
 
-    # Từ khóa quét linh hoạt nhóm Gối Chậu (tìm trong cả Cột M lẫn Cột J)
-    kw_goi_chau = 'Gối|Chậu|gối|chậu|pot|Pot|Chau|Goi'
+    # Từ khóa mở rộng để bắt 100% tên nhóm Gối Chậu
+    kw_goi_chau = 'Gối|Chậu|gối|chậu|pot|Pot|Chau|Goi|Chậu cao su|Gối cao su|Gối thép|Chậu thép'
 
     for i, tab_name in enumerate(nhom_sp_list):
         with tabs[i]:
             if tab_name == '📊 Dashboard Tổng':
                 df_tab = df_filtered.copy()
             elif tab_name == '📦 Gối Chậu':
-                # Tìm trong Cột M (Nhóm SP) HOẶC Cột J (Quy Cách)
                 cond_m = df_filtered['Nhom_SP_Clean'].str.contains(kw_goi_chau, case=False, na=False)
                 cond_j = df_filtered['Quy_Cach_Clean'].str.contains(kw_goi_chau, case=False, na=False)
                 df_tab = df_filtered[cond_m | cond_j]
