@@ -20,13 +20,11 @@ def clean_number_exact(val):
     if pd.isna(val) or val is None:
         return 0.0
     
-    # Loại bỏ triệt để khoảng trắng thông thường và ký tự khoảng trắng không ngắt dòng (\xa0)
     val_str = str(val).replace('\xa0', '').replace(' ', '').strip()
     
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
 
-    # Xử lý định dạng dấu phẩy/dấu chấm thập phân
     if ',' in val_str and '.' in val_str:
         if val_str.rfind(',') > val_str.rfind('.'):
             val_str = val_str.replace('.', '').replace(',', '.')
@@ -86,7 +84,7 @@ def load_data():
     df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_exact)
     df = df[df['So_Luong_Tong_DH'] > 0]
 
-    # TRÍCH XUẤT THỜI GIAN ĐẶT HÀNG (Lấy ưu tiên Cột D -> Ngày Chốt -> Ngày Duyệt)
+    # TRÍCH XUẤT THỜI GIAN ĐẶT HÀNG
     df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Dat_Hang'] = df['Nam_Col_D'].fillna(df['Nam_Chot']).fillna(df['Nam_Duyet']).fillna('Khác')
@@ -94,7 +92,7 @@ def load_data():
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month.fillna(df['Ngay_Duyet_DH_DT'].dt.month)
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter.fillna(df['Ngay_Duyet_DH_DT'].dt.quarter)
 
-    # TRÍCH XUẤT THỜI GIAN NHẬP KHO THỰC TẾ (Cột AH)
+    # TRÍCH XUẤT THỜI GIAN NHẬP KHO THỰC TẾ
     df['Nam_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Thang_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.month
     df['Quy_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.quarter
@@ -104,7 +102,6 @@ def load_data():
     df['Quy_Cach_Clean'] = df['Quy_Cach'].fillna('').astype(str).str.strip().str.upper()
     df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
 
-    # Chuỗi tổng hợp để phân loại chuẩn
     df['Full_Info'] = df['Nhom_SP_Clean'] + ' ' + df['Quy_Cach_Clean']
 
     # Formatting ngày hiển thị
@@ -116,30 +113,31 @@ def load_data():
     return df
 
 # -----------------------------------------------------------------------------
-# 4. CHUẨN HÓA PHÂN LOẠI TAB (XỬ LÝ TRIỆT ĐỂ BỎ SÓT / DƯ THỪA)
+# 4. CHUẨN HÓA PHÂN LOẠI TAB (SỬA LỖI LÂN LỘN CỘT / GỐI CHẬU)
 # -----------------------------------------------------------------------------
 def classify_tab(row):
     info = row['Full_Info']
     nhom = row['Nhom_SP_Clean']
 
-    # 1. Gối Chậu: Bao gồm toàn bộ các chủng loại gối, chậu, bearing, pot...
-    kw_goi_chau = ['GỐI', 'CHẬU', 'BEARING', 'POT', 'ELASTOMERIC', 'GIAO THOA', 'CẦU', 'THÉP']
-    if any(k in nhom for k in ['GỐI', 'CHẬU', 'BEARING', 'POT']) or any(k in info for k in kw_goi_chau):
-        # Đảm bảo không nhầm sang Khe co giãn
-        if 'KHE' not in nhom and 'LƯỢC' not in nhom:
-            return '📦 Gối Chậu'
+    # Ưu tiên 1: Hệ Cột + Phụ Kiện (Phải lọc trước để tránh từ "THÉP" đè sang Gối)
+    kw_cot = ['CỘT', 'LAN CAN', 'PHỤ KIỆN', 'THIẾT BỊ', 'XÀ', 'ĐẾ']
+    if any(k in nhom for k in ['CỘT', 'LAN CAN', 'PHỤ KIỆN']) or any(k in info for k in kw_cot):
+        return '🏗️ Hệ Cột + Phụ Kiện'
 
-    # 2. Khe Răng Lược / Khe Co Giãn: Chỉ nhận đúng dòng thuộc về Khe
-    if 'KHE' in info or 'LƯỢC' in info or 'EXPANSION' in info or 'CO GIÃN' in info:
+    # Ưu tiên 2: Khe Răng Lược / Khe Co Giãn
+    kw_khe = ['KHE', 'LƯỢC', 'EXPANSION', 'CO GIÃN']
+    if any(k in nhom for k in kw_khe) or any(k in info for k in kw_khe):
         return '⚙️ Khe Răng Lược'
 
-    # 3. Tấm VCO / Tấm Chống Ồn: Nhận diện chính xác Tấm VCO / Tấm giảm âm chống ồn
-    if 'VCO' in info or 'TẤM' in info or 'CHỐNG ỒN' in info or 'GIẢM ÂM' in info:
+    # Ưu tiên 3: Tấm VCO / Tấm Chống Ồn
+    kw_tam = ['VCO', 'CHỐNG ỒN', 'GIẢM ÂM', 'TẤM']
+    if any(k in nhom for k in kw_tam) or any(k in info for k in kw_tam):
         return '🧱 Tấm VCO'
 
-    # 4. Hệ Cột + Phụ Kiện
-    if 'CỘT' in info or 'PHỤ KIỆN' in info or 'THIẾT BỊ' in info or 'LAN CAN' in info:
-        return '🏗️ Hệ Cột + Phụ Kiện'
+    # Ưu tiên 4: Gối Chậu (Loại bỏ các từ khóa quá rộng như "THÉP", "CẦU")
+    kw_goi_chau = ['GỐI', 'CHẬU', 'BEARING', 'POT', 'ELASTOMERIC', 'GIAO THOA']
+    if any(k in nhom for k in kw_goi_chau) or any(k in info for k in kw_goi_chau):
+        return '📦 Gối Chậu'
 
     return '📋 Nhóm Khác'
 
@@ -175,45 +173,39 @@ try:
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
     # -------------------------------------------------------------------------
-    # TÍNH TOÁN LOGIC
+    # TÍNH TOÁN LOGIC LỌC DỮ LIỆU
     # -------------------------------------------------------------------------
     df_filtered = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
         df_filtered = df_filtered[df_filtered['Bo_Phan_KD'] == bp_sel]
 
-    # Đặt hàng: Lọc theo Năm/Kỳ Đặt Hàng
-    cond_dh_nam = (df_filtered['Nam_Dat_Hang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
-    
-    # Nhập kho: Lọc theo Năm/Kỳ ở Cột AH
-    cond_nk_nam = (df_filtered['Nam_Nhap_Kho'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+    # Điều kiện lọc theo Thời gian
+    if nam_sel != 'Tất cả các năm':
+        cond_nam = (df_filtered['Nam_Dat_Hang'] == nam_sel)
+    else:
+        cond_nam = True
 
     if ky_sel == "Theo Tháng":
-        cond_dh_ky = df_filtered['Thang_Chot'] == thang_sel
-        cond_nk_ky = df_filtered['Thang_Nhap_Kho'] == thang_sel
+        cond_ky = df_filtered['Thang_Chot'] == thang_sel
     elif ky_sel == "Theo Quý":
-        cond_dh_ky = df_filtered['Quy_Chot'] == quy_sel
-        cond_nk_ky = df_filtered['Quy_Nhap_Kho'] == quy_sel
+        cond_ky = df_filtered['Quy_Chot'] == quy_sel
     elif ky_sel == "6 Tháng Đầu Năm":
-        cond_dh_ky = df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])
-        cond_nk_ky = df_filtered['Thang_Nhap_Kho'].isin([1, 2, 3, 4, 5, 6])
+        cond_ky = df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])
     elif ky_sel == "6 Tháng Cuối Năm":
-        cond_dh_ky = df_filtered['Thang_Chot'].isin([7, 8, 9, 10, 11, 12])
-        cond_nk_ky = df_filtered['Thang_Nhap_Kho'].isin([7, 8, 9, 10, 11, 12])
+        cond_ky = df_filtered['Thang_Chot'].isin([7, 8, 9, 10, 11, 12])
     else:
-        cond_dh_ky = True
-        cond_nk_ky = True
+        cond_ky = True
 
-    df_filtered['Is_Dat_Hang_Valid'] = cond_dh_nam & cond_dh_ky
-    df_filtered['Is_Nhap_Kho_Valid'] = df_filtered['Ngay_Nhap_Kho_DT'].notna() & cond_nk_nam & cond_nk_ky
+    # Giữ nguyên toàn bộ dòng thuộc kỳ Đặt hàng được chọn
+    df_display = df_filtered[cond_nam & cond_ky].copy()
 
-    # Tính toán chính xác số lượng hiển thị cho kỳ báo cáo được chọn
-    df_filtered['SL_Dat_Hang_Display'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Dat_Hang_Valid'], 0.0)
-    df_filtered['SL_Nhap_Kho_Display'] = df_filtered['So_Luong_Tong_DH'].where(df_filtered['Is_Nhap_Kho_Valid'], 0.0)
-    df_filtered['SL_Ton_Kho_Display'] = df_filtered['SL_Dat_Hang_Display'] - df_filtered['SL_Nhap_Kho_Display']
-
-    # Chỉ hiển thị các đơn hàng thuộc kỳ Đặt Hàng hoặc kỳ Nhập Kho tương ứng
-    df_display = df_filtered[df_filtered['Is_Dat_Hang_Valid'] | df_filtered['Is_Nhap_Kho_Valid']].copy()
+    # Tính toán chính xác Số lượng Nhập kho và Tồn kho lũy kế theo từng Đơn hàng
+    df_display['SL_Dat_Hang_Display'] = df_display['So_Luong_Tong_DH']
+    df_display['SL_Nhap_Kho_Display'] = df_display.apply(
+        lambda r: r['So_Luong_Tong_DH'] if pd.notna(r['Ngay_Nhap_Kho_DT']) else 0.0, axis=1
+    )
+    df_display['SL_Ton_Kho_Display'] = df_display['SL_Dat_Hang_Display'] - df_display['SL_Nhap_Kho_Display']
 
     st.markdown("---")
 
