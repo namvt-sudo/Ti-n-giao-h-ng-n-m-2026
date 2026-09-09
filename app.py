@@ -146,7 +146,16 @@ def load_data():
     )
  
     # Lọc bỏ các dòng không có số lượng (tránh các dòng chú thích trống)
-    df = df[df['So_Luong_Tong_DH'] > 0]
+    # Chỉ loại dòng khi TẤT CẢ các cột số lượng đều = 0 — giữ lại các dòng "đợt" nhập kho
+    # chỉ có giá trị ở cột nhóm riêng (VD cột P) dù cột N (Số lượng Tổng ĐH) trống/0
+    df['SL_TongCacNhom'] = (
+        df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] +
+        df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
+    )
+    df = df[(df['So_Luong_Tong_DH'] > 0) | (df['SL_TongCacNhom'] > 0)]
+ 
+    # Với các dòng mà cột N trống/0 nhưng có số lượng ở cột nhóm, dùng luôn tổng các nhóm làm số lượng dòng đó
+    df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCacNhom']
  
     # Trích xuất Năm chuẩn xác
     df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
@@ -222,6 +231,14 @@ try:
     if bp_sel != 'Tất cả bộ phận':
         df_filtered = df_filtered[df_filtered['Bo_Phan_KD'] == bp_sel]
  
+    # df_bp: CHỈ áp dụng lọc Bộ phận KD, KHÔNG áp dụng lọc Năm/Kỳ.
+    # Dùng riêng để tính "Nhập kho" — theo yêu cầu, số Nhập kho luôn tính trên TOÀN BỘ
+    # dữ liệu (không phụ thuộc đơn đó được ghi nhận vào năm nào), vì một đơn có thể có
+    # nhiều đợt nhập kho rải rác ở nhiều năm khác nhau.
+    df_bp = df.copy()
+    if bp_sel != 'Tất cả bộ phận':
+        df_bp = df_bp[df_bp['Bo_Phan_KD'] == bp_sel]
+ 
     st.markdown("---")
  
     # 4. DANH SÁCH THẺ TAB CHÍNH
@@ -243,16 +260,19 @@ try:
             if tab_name == '📊 Dashboard Tổng':
                 df_tab = df_filtered.copy()
                 total_so_luong = df_tab['So_Luong_Tong_DH'].sum()
-                total_nhap_kho = df_tab['SL_Nhap_Kho'].sum()
-                total_ton_kho = df_tab['SL_Ton_Kho'].sum()
+                total_nhap_kho = df_bp.loc[df_bp['Da_Nhap_Kho'], 'So_Luong_Tong_DH'].sum()
+                total_ton_kho = total_so_luong - total_nhap_kho
             else:
                 qty_col = tab_qty_col[tab_name]
                 # Dòng thuộc nhóm này khi cột số lượng riêng của nhóm > 0
                 df_tab = df_filtered[df_filtered[qty_col] > 0]
+                df_tab_bp = df_bp[df_bp[qty_col] > 0]
  
-                # 5. HIỂN THỊ METRIC TỔNG SỐ LƯỢNG — dùng đúng số lượng của nhóm (không lấy cột N chung)
+                # 5. HIỂN THỊ METRIC TỔNG SỐ LƯỢNG
+                # Đặt hàng: theo đúng bộ lọc Năm/Kỳ/Bộ phận đang chọn
                 total_so_luong = df_tab[qty_col].sum()
-                total_nhap_kho = df_tab.apply(lambda r: r[qty_col] if r['Da_Nhap_Kho'] else 0.0, axis=1).sum()
+                # Nhập kho: luôn tính trên TOÀN BỘ dữ liệu (không lọc theo Năm/Kỳ)
+                total_nhap_kho = df_tab_bp.loc[df_tab_bp['Da_Nhap_Kho'], qty_col].sum()
                 total_ton_kho = total_so_luong - total_nhap_kho
  
             m1, m2, m3, m4 = st.columns(4)
