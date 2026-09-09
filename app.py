@@ -38,17 +38,14 @@ def clean_number(val):
     if pd.isna(val) or val == '':
         return 0.0
     val_str = str(val).strip()
-    # Nếu có cả dấu chấm và phẩy (vd: 1,500.00 hoặc 1.500,00)
     if ',' in val_str and '.' in val_str:
         val_str = val_str.replace('.', '').replace(',', '.')
     elif ',' in val_str:
-        # Nếu dùng phẩy làm hàng nghìn (1,500)
         if len(val_str.split(',')[-1]) == 3:
             val_str = val_str.replace(',', '')
         else:
             val_str = val_str.replace(',', '.')
     elif '.' in val_str:
-        # Nếu dùng chấm làm hàng nghìn (1.500)
         if len(val_str.split('.')[-1]) == 3:
             val_str = val_str.replace('.', '')
             
@@ -82,14 +79,16 @@ def load_data():
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
     df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
     
-    # Chuẩn hóa Nhóm SP (Xóa khoảng trắng thừa)
-    df['Nhom_SP'] = df['Nhom_SP'].astype(str).str.strip().str.title()
+    # Làm sạch văn bản & Ép kiểu chuỗi an toàn
+    df['Nhom_SP'] = df['Nhom_SP'].fillna('').astype(str).str.strip().str.title()
+    df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
+    df['Nam_Dat_Hang'] = df['Nam_Dat_Hang'].fillna('').astype(str).str.replace('.0', '', regex=False).str.strip()
     
-    # Chuẩn hóa Số Lượng bằng hàm clean_number
+    # Chuẩn hóa Số Lượng
     df['So_Luong'] = df['So_Luong_Raw'].apply(clean_number)
     
     # Lọc đơn hợp lệ (có Số ĐH)
-    df = df[df['So_DH'].notna() & (df['So_DH'].astype(str).str.strip() != '') & (df['So_DH'] != 'nan')]
+    df = df[df['So_DH'].notna() & (df['So_DH'].astype(str).str.strip() != '') & (df['So_DH'].astype(str) != 'nan')]
     
     # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
@@ -115,7 +114,9 @@ try:
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     
     with col_f1:
-        nam_list = ['Tất cả các năm'] + sorted([str(int(float(x))) for x in df['Nam_Dat_Hang'].dropna().unique() if str(x).replace('.','').isdigit()])
+        # Sắp xếp danh sách năm an toàn (chuyển toàn bộ về chuỗi)
+        raw_nams = [str(x) for x in df['Nam_Dat_Hang'].unique() if str(x) not in ['', 'nan', 'None']]
+        nam_list = ['Tất cả các năm'] + sorted(raw_nams)
         nam_sel = st.selectbox("📅 Chọn Năm (Cột D)", nam_list, index=0)
         
     with col_f2:
@@ -130,13 +131,14 @@ try:
             st.write("")
             
     with col_f4:
-        bp_list = ['Tất cả bộ phận'] + [x for x in df['Bo_Phan_KD'].dropna().unique() if str(x) != 'nan']
+        raw_bps = [str(x) for x in df['Bo_Phan_KD'].unique() if str(x) not in ['', 'nan', 'None']]
+        bp_list = ['Tất cả bộ phận'] + sorted(raw_bps)
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
     # Lọc dữ liệu
     df_filtered = df.copy()
     if nam_sel != 'Tất cả các năm':
-        df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'].astype(str).str.contains(nam_sel, na=False)]
+        df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'] == nam_sel]
     if ky_sel == "Theo Tháng":
         df_filtered = df_filtered[df_filtered['Thang_Chot'] == thang_sel]
     elif ky_sel == "Theo Quý":
@@ -151,8 +153,8 @@ try:
     st.markdown("---")
 
     # 4. DANH SÁCH THẺ TAB SẢN PHẨM
-    nhom_sp_unique = [x for x in df_filtered['Nhom_SP'].unique() if str(x) != 'Nan' and str(x) != '']
-    nhom_sp_list = ['📊 Dashboard Tổng'] + sorted(nhom_sp_unique)
+    raw_nhoms = [str(x) for x in df_filtered['Nhom_SP'].unique() if str(x) not in ['', 'nan', 'None']]
+    nhom_sp_list = ['📊 Dashboard Tổng'] + sorted(raw_nhoms)
     tabs = st.tabs(nhom_sp_list)
 
     for i, tab_name in enumerate(nhom_sp_list):
