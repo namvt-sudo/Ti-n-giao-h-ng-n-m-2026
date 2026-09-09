@@ -45,14 +45,29 @@ def clean_number_exact(val):
     # Loại bỏ ký tự khoảng trắng không ngắt
     val_str = val_str.replace('\xa0', '').replace(' ', '')
  
-    # Xử lý định dạng dấu phẩy/dấu chấm
-    if ',' in val_str and '.' in val_str:
+    has_comma = ',' in val_str
+    has_dot = '.' in val_str
+ 
+    if has_comma and has_dot:
+        # Có cả 2 dấu: dấu nào đứng sau cùng là dấu thập phân
         if val_str.rfind(',') > val_str.rfind('.'):
             val_str = val_str.replace('.', '').replace(',', '.')
         else:
             val_str = val_str.replace(',', '')
-    elif ',' in val_str:
-        val_str = val_str.replace(',', '.')
+    elif has_comma:
+        # Chỉ có dấu phẩy: nếu 3 chữ số sau dấu phẩy -> phân cách hàng nghìn (VD: 1,500 -> 1500)
+        # nếu không -> dấu thập phân (VD: 12,5 -> 12.5)
+        parts = val_str.split(',')
+        if len(parts) > 1 and len(parts[-1]) == 3:
+            val_str = val_str.replace(',', '')
+        else:
+            val_str = val_str.replace(',', '.')
+    elif has_dot:
+        # Chỉ có dấu chấm: nếu 3 chữ số sau dấu chấm -> phân cách hàng nghìn (VD: 1.500 -> 1500)
+        # nếu không -> giữ nguyên là dấu thập phân (VD: 12.5 vẫn là 12.5)
+        parts = val_str.split('.')
+        if len(parts) > 1 and len(parts[-1]) == 3:
+            val_str = val_str.replace('.', '')
  
     try:
         return float(val_str)
