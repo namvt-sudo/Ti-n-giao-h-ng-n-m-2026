@@ -4,7 +4,6 @@ import pandas as pd
 # 1. Cấu hình trang web
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ Đơn Hàng", layout="wide", initial_sidebar_state="collapsed")
 
-# Custom CSS mô phỏng giao diện Tab bo tròn giống mẫu
 st.markdown("""
     <style>
     .main { padding: 1rem; }
@@ -34,6 +33,30 @@ def get_ggs_export_url(url):
     gid = "984933238" # Tab Theo dõi ĐH
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
+# Hàm xử lý số lượng an toàn tuyệt đối
+def clean_number(val):
+    if pd.isna(val) or val == '':
+        return 0.0
+    val_str = str(val).strip()
+    # Nếu có cả dấu chấm và phẩy (vd: 1,500.00 hoặc 1.500,00)
+    if ',' in val_str and '.' in val_str:
+        val_str = val_str.replace('.', '').replace(',', '.')
+    elif ',' in val_str:
+        # Nếu dùng phẩy làm hàng nghìn (1,500)
+        if len(val_str.split(',')[-1]) == 3:
+            val_str = val_str.replace(',', '')
+        else:
+            val_str = val_str.replace(',', '.')
+    elif '.' in val_str:
+        # Nếu dùng chấm làm hàng nghìn (1.500)
+        if len(val_str.split('.')[-1]) == 3:
+            val_str = val_str.replace('.', '')
+            
+    try:
+        return float(val_str)
+    except:
+        return 0.0
+
 @st.cache_data(ttl=10)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
@@ -42,8 +65,8 @@ def load_data():
     # Đọc dữ liệu từ dòng index 4 (dòng 5 Excel)
     df = pd.DataFrame({
         'So_DH': df_raw.iloc[4:, 1],          # Cột B
-        'Trang_Thai_SX': df_raw.iloc[4:, 2],  # Cột C: Tình trạng sản xuất
-        'Nam_Dat_Hang': df_raw.iloc[4:, 3],   # Cột D: Năm đặt hàng
+        'Trang_Thai_SX': df_raw.iloc[4:, 2],  # Cột C
+        'Nam_Dat_Hang': df_raw.iloc[4:, 3],   # Cột D
         'Bo_Phan_KD': df_raw.iloc[4:, 4],     # Cột E
         'NV_KD': df_raw.iloc[4:, 6],         # Cột G
         'Du_An': df_raw.iloc[4:, 7],         # Cột H
@@ -59,14 +82,16 @@ def load_data():
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
     df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
     
-    # Chuẩn hóa Số Lượng
-    df['So_Luong'] = df['So_Luong_Raw'].astype(str).str.replace('.', '').str.replace(',', '.')
-    df['So_Luong'] = pd.to_numeric(df['So_Luong'], errors='coerce').fillna(0)
+    # Chuẩn hóa Nhóm SP (Xóa khoảng trắng thừa)
+    df['Nhom_SP'] = df['Nhom_SP'].astype(str).str.strip().str.title()
     
-    # Lọc đơn hợp lệ
-    df = df[df['So_DH'].notna() & (df['So_DH'] != '')]
+    # Chuẩn hóa Số Lượng bằng hàm clean_number
+    df['So_Luong'] = df['So_Luong_Raw'].apply(clean_number)
     
-    # Định dạng Ngày
+    # Lọc đơn hợp lệ (có Số ĐH)
+    df = df[df['So_DH'].notna() & (df['So_DH'].astype(str).str.strip() != '') & (df['So_DH'] != 'nan')]
+    
+    # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_YCGH'] = df['Ngay_YCGH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Chot_Cuoi'] = df['Ngay_Chot_Cuoi_DT'].dt.strftime('%d/%m/%Y').fillna('-')
@@ -74,10 +99,10 @@ def load_data():
     
     # Tính số lượng đã nhập kho & tồn
     df['Da_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].notna()
-    df['SL_Nhap_Kho'] = df.apply(lambda row: row['So_Luong'] if row['Da_Nhap_Kho'] else 0, axis=1)
+    df['SL_Nhap_Kho'] = df.apply(lambda row: row['So_Luong'] if row['Da_Nhap_Kho'] else 0.0, axis=1)
     df['SL_Ton_Kho'] = df['So_Luong'] - df['SL_Nhap_Kho']
     
-    # Phân loại Tháng/Quý theo Ngày Chốt Giao (AG)
+    # Phân loại Tháng/Quý
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter
     
@@ -90,7 +115,7 @@ try:
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     
     with col_f1:
-        nam_list = ['Tất cả'] + sorted([str(int(x)) for x in df['Nam_Dat_Hang'].dropna().unique() if str(x).isdigit()])
+        nam_list = ['Tất cả các năm'] + sorted([str(int(float(x))) for x in df['Nam_Dat_Hang'].dropna().unique() if str(x).replace('.','').isdigit()])
         nam_sel = st.selectbox("📅 Chọn Năm (Cột D)", nam_list, index=0)
         
     with col_f2:
@@ -98,19 +123,19 @@ try:
         
     with col_f3:
         if ky_sel == "Theo Tháng":
-            thang_sel = st.selectbox("Tháng", list(range(1, 13)), index=8) # Đang chọn Tháng 9 mặc định
+            thang_sel = st.selectbox("Tháng", list(range(1, 13)), index=8)
         elif ky_sel == "Theo Quý":
             quy_sel = st.selectbox("Quý", [1, 2, 3, 4], index=2)
         else:
             st.write("")
             
     with col_f4:
-        bp_list = ['Tất cả'] + list(df['Bo_Phan_KD'].dropna().unique())
+        bp_list = ['Tất cả bộ phận'] + [x for x in df['Bo_Phan_KD'].dropna().unique() if str(x) != 'nan']
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
-    # Lọc dữ liệu theo Bộ Lọc
+    # Lọc dữ liệu
     df_filtered = df.copy()
-    if nam_sel != 'Tất cả':
+    if nam_sel != 'Tất cả các năm':
         df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'].astype(str).str.contains(nam_sel, na=False)]
     if ky_sel == "Theo Tháng":
         df_filtered = df_filtered[df_filtered['Thang_Chot'] == thang_sel]
@@ -120,13 +145,14 @@ try:
         df_filtered = df_filtered[df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])]
     elif ky_sel == "6 Tháng Cuối Năm":
         df_filtered = df_filtered[df_filtered['Thang_Chot'].isin([7, 8, 9, 10, 11, 12])]
-    if bp_sel != 'Tất cả':
+    if bp_sel != 'Tất cả bộ phận':
         df_filtered = df_filtered[df_filtered['Bo_Phan_KD'] == bp_sel]
 
     st.markdown("---")
 
-    # 4. DANH SÁCH THẺ TAB SẢN PHẨM (GIỐNG GIAO DIỆN MẪU)
-    nhom_sp_list = ['📊 Dashboard Tổng'] + list(df_filtered['Nhom_SP'].dropna().unique())
+    # 4. DANH SÁCH THẺ TAB SẢN PHẨM
+    nhom_sp_unique = [x for x in df_filtered['Nhom_SP'].unique() if str(x) != 'Nan' and str(x) != '']
+    nhom_sp_list = ['📊 Dashboard Tổng'] + sorted(nhom_sp_unique)
     tabs = st.tabs(nhom_sp_list)
 
     for i, tab_name in enumerate(nhom_sp_list):
@@ -136,17 +162,17 @@ try:
             else:
                 df_tab = df_filtered[df_filtered['Nhom_SP'] == tab_name]
 
-            # 5. CÁC THẺ CON SỐ TỔNG QUAN (METRICS)
+            # 5. CÁC THẺ CON SỐ TỔNG QUAN
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Tổng Số Đơn", f"{len(df_tab)} Đơn")
-            m2.metric("📦 Tổng SL Đặt Hàng", f"{int(df_tab['So_Luong'].sum()):,}")
-            m3.metric("✅ Tổng SL Nhập Kho", f"{int(df_tab['SL_Nhap_Kho'].sum()):,}")
-            m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{int(df_tab['SL_Ton_Kho'].sum()):,}")
+            m2.metric("📦 Tổng SL Đặt Hàng", f"{df_tab['So_Luong'].sum():,:g}")
+            m3.metric("✅ Tổng SL Nhập Kho", f"{df_tab['SL_Nhap_Kho'].sum():,:g}")
+            m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{df_tab['SL_Ton_Kho'].sum():,:g}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # 6. Ô TÌM KIẾM NHANH DƯỚI TAB
-            search_kw = st.text_input(f"🔍 Tìm kiếm đơn hàng / dự án trong tab [{tab_name}]:", key=f"search_{i}")
+            # 6. Ô TÌM KIẾM NHANH
+            search_kw = st.text_input(f"🔍 Tìm kiếm trong tab [{tab_name}]:", key=f"search_{i}")
             if search_kw:
                 df_tab = df_tab[
                     df_tab['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
@@ -154,7 +180,7 @@ try:
                     df_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
 
-            # 7. BẢNG CHI TIẾT ĐƠN HÀNG
+            # 7. BẢNG CHI TIẾT
             cols_show = [
                 'So_DH', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong', 'DVT',
                 'SL_Nhap_Kho', 'SL_Ton_Kho', 'Ngay_Duyet_DH', 'Ngay_YCGH', 'Ngay_Chot_Cuoi', 'Ngay_Nhap_Kho'
@@ -167,10 +193,10 @@ try:
                     "Trang_Thai_SX": "Trạng Thái (Cột C)",
                     "Du_An": "Dự Án",
                     "Quy_Cach": "Quy Cách Chủng Loại",
-                    "So_Luong": st.column_config.NumberColumn("SL Đặt", format="%d"),
+                    "So_Luong": st.column_config.NumberColumn("SL Đặt", format="%.0f"),
                     "DVT": "ĐVT",
-                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho", format="%d"),
-                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn", format="%d"),
+                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho", format="%.0f"),
+                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn", format="%.0f"),
                     "Ngay_Duyet_DH": "1. Duyệt ĐH (AB)",
                     "Ngay_YCGH": "2. YCGH (AC)",
                     "Ngay_Chot_Cuoi": "3. Chốt Cuối (AG)",
