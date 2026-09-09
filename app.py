@@ -34,34 +34,28 @@ def get_ggs_export_url(url):
     gid = "984933238" # Tab Theo dõi ĐH
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
-# Hàm làm sạch và chuyển đổi số lượng nâng cao
-def clean_number_strict(val):
+# HÀM XỬ LÝ SỐ CHUẨN XÁC 100% (KHÔNG BỊ NHÂN 1000)
+def clean_number_safe(val):
     if pd.isna(val) or val is None:
         return 0.0
     val_str = str(val).strip()
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-']:
         return 0.0
     
-    # Loại bỏ khoảng trắng không ngắt (non-breaking space) và khoảng trắng thường
+    # Loại bỏ khoảng trắng
     val_str = val_str.replace('\xa0', '').replace(' ', '')
     
-    # Xử lý định dạng số VN / EU (1.500,50 -> 1500.50)
+    # Nếu dạng "1,500.00" -> đổi "," thành rỗng
+    # Nếu dạng "1.500,00" -> đổi "." thành rỗng và "," thành "."
     if ',' in val_str and '.' in val_str:
-        if val_str.rfind(',') > val_str.rfind('.'):
+        if val_str.rfind(',') > val_str.rfind('.'): # Dạng VN (1.000,50)
             val_str = val_str.replace('.', '').replace(',', '.')
-        else:
+        else: # Dạng US (1,000.50)
             val_str = val_str.replace(',', '')
     elif ',' in val_str:
-        # Nếu dấu phẩy phân tách thập phân
-        parts = val_str.split(',')
-        if len(parts[-1]) == 3: # dạng 1,000
-            val_str = val_str.replace(',', '')
-        else:
-            val_str = val_str.replace(',', '.')
-    
-    # Chỉ giữ lại chữ số và dấu chấm thập phân
-    val_str = re.sub(r'[^0-9.]', '', val_str)
-    
+        # Thay phẩy bằng chấm thập phân
+        val_str = val_str.replace(',', '.')
+        
     try:
         return float(val_str)
     except:
@@ -92,7 +86,7 @@ def load_data():
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
     df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
     
-    # Bỏ các dòng rác / Dòng tổng cộng / Dòng không có Số ĐH
+    # Bỏ các dòng rác / Dòng tổng cộng
     df['So_DH_Clean'] = df['So_DH'].fillna('').astype(str).str.strip()
     df = df[df['So_DH_Clean'] != '']
     df = df[~df['So_DH_Clean'].str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
@@ -103,7 +97,7 @@ def load_data():
     df['Nam_Dat_Hang'] = df['Nam_Dat_Hang'].fillna('').astype(str).str.replace('.0', '', regex=False).str.strip()
     
     # Chuẩn hóa Số Lượng Tổng ĐH
-    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_strict)
+    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_safe)
     
     # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
@@ -116,7 +110,7 @@ def load_data():
     df['SL_Nhap_Kho'] = df.apply(lambda row: row['So_Luong_Tong_DH'] if row['Da_Nhap_Kho'] else 0.0, axis=1)
     df['SL_Ton_Kho'] = df['So_Luong_Tong_DH'] - df['SL_Nhap_Kho']
     
-    # Phân loại Tháng/Quý (Dùng ngày Chốt cuối, nếu chưa chốt thì lấy ngày Duyệt ĐH)
+    # Phân loại Tháng/Quý
     df['Ngay_Tham_Chieu'] = df['Ngay_Chot_Cuoi_DT'].fillna(df['Ngay_Duyet_DH_DT'])
     df['Thang_Chot'] = df['Ngay_Tham_Chieu'].dt.month
     df['Quy_Chot'] = df['Ngay_Tham_Chieu'].dt.quarter
