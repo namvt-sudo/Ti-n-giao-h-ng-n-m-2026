@@ -135,10 +135,8 @@ def load_data():
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
     df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
+    # ĐƠN DONE = ĐÃ NHẬP KHO
     df['Da_Nhap_Kho'] = df['Trang_Thai_SX'].astype(str).str.lower() == 'done'
-    df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year
-    df['Thang_NhapKho'] = df['Ngay_NhapKho_DT'].dt.month
-    df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter
 
     return df
 
@@ -182,15 +180,12 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC TỐI ƯU THEO ĐỀ XUẤT
+    # 4. LOGIC LỌC DỮ LIỆU ĐÒN BẨY & TỒN ĐỌNG
     df_dh = df.copy()
 
-    # TH 1: Người dùng chủ động chọn Tình Trạng SX cụ thể (Ví dụ: "Đang sx", "Tạm dừng SX"...)
-    # -> BỎ QUA lọc Năm / Tháng / Kỳ để rà soát TOÀN BỘ đơn tồn trong lịch sử!
     if tt_sel != 'Tất cả tình trạng':
+        # Bỏ qua lọc Thời gian nếu chọn Tình Trạng SX cụ thể
         df_dh = df_dh[df_dh['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-    
-    # TH 2: Chọn "Tất cả tình trạng" -> Áp dụng điều kiện thời gian + Gom đơn chưa hoàn thành từ quá khứ
     else:
         cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
         cond_thuoc_ky = True
@@ -217,21 +212,8 @@ try:
     if nv_sel != 'Tất cả NVKD':
         df_dh = df_dh[df_dh['NV_KD'] == nv_sel]
 
-    # Lọc danh sách Nhập kho thực tế
-    df_nk = df[df['Da_Nhap_Kho']].copy()
-    if nam_sel != 'Tất cả các năm':
-        df_nk = df_nk[df_nk['Nam_NhapKho'] == nam_sel]
-    if ky_sel == "Theo Tháng" and thang_sel:
-        df_nk = df_nk[df_nk['Thang_NhapKho'] == thang_sel]
-    elif ky_sel == "Theo Quý" and quy_sel:
-        df_nk = df_nk[df_nk['Quy_NhapKho'] == quy_sel]
-
-    if tt_sel != 'Tất cả tình trạng':
-        df_nk = df_nk[df_nk['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-    if bp_sel != 'Tất cả bộ phận':
-        df_nk = df_nk[df_nk['Bo_Phan_KD'] == bp_sel]
-    if nv_sel != 'Tất cả NVKD':
-        df_nk = df_nk[df_nk['NV_KD'] == nv_sel]
+    # LỌC DANH SÁCH NHẬP KHO (LẤY TẤT CẢ ĐƠN CÓ TRẠNG THÁI DONE)
+    df_nk = df_dh[df_dh['Da_Nhap_Kho']].copy()
 
     st.markdown("---")
 
@@ -269,7 +251,7 @@ try:
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Tổng Số Đơn Quản Lý", f"{so_luong_don_hang} Đơn")
             m2.metric("📦 Tổng SL Đặt Hàng", f"{sum_dh:,.2f}")
-            m3.metric("✅ Tổng SL Nhập Kho", f"{sum_nk:,.2f}")
+            m3.metric("✅ Tổng SL Nhập Kho (Done)", f"{sum_nk:,.2f}")
             m4.metric("⏳ Chênh Lệch Đặt - Nhập", f"{(sum_dh - sum_nk):,.2f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -282,7 +264,7 @@ try:
                     df_dh_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
 
-            sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Đợt Nhập Kho Thực Tế"])
+            sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Đợt Nhập Kho Thực Tế (Done)"])
 
             with sub_tab1:
                 st.caption(f"Danh sách quản lý theo điều kiện lọc ({len(df_dh_tab)} chi tiết hàng):")
@@ -298,7 +280,7 @@ try:
                 )
 
             with sub_tab2:
-                st.caption(f"Danh sách các đợt hoàn thành nhập kho trong kỳ ({len(df_nk_tab)} chi tiết hàng):")
+                st.caption(f"Danh sách các đơn đã hoàn thành (Done) ({len(df_nk_tab)} chi tiết hàng):")
                 st.dataframe(
                     df_nk_tab[cols_display + [q_col]],
                     column_config={
