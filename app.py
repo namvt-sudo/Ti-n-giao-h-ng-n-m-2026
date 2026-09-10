@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# 1. CẤU HÌNH TRANG WEB & GIAO DIỆN
+# 1. CẤU HÌNH TRANG WEB
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -23,7 +23,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# TIÊU ĐỀ VÀ NÚT CẬP NHẬT CACHE
+# TIÊU ĐỀ VÀ NÚT CẬP NHẬT
 col_title, col_btn = st.columns([3, 1])
 with col_title:
     st.title("🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026")
@@ -65,35 +65,34 @@ def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
 
-    # Đọc dữ liệu từ dòng 4 trở đi (Header nằm ở dòng 1 & 2)
-    df = pd.DataFrame({
-        'So_DH': df_raw.iloc[3:, 1].replace('', None).ffill(),         # Col B (Index 1)
-        'Trang_Thai_SX': df_raw.iloc[3:, 2].fillna('Chưa SX'),          # Col C (Index 2)
-        'Nam_Dat_Hang_Raw': df_raw.iloc[3:, 3],                         # Col D (Index 3)
-        'Bo_Phan_KD': df_raw.iloc[3:, 4].fillna('Chưa phân loại'),      # Col E (Index 4)
-        'NV_KD': df_raw.iloc[3:, 6].fillna('Chưa phân loại'),          # Col G (Index 6)
-        'Du_An': df_raw.iloc[3:, 7].fillna(''),                         # Col H (Index 7)
-        'Quy_Cach': df_raw.iloc[3:, 9].fillna(''),                      # Col J (Index 9)
-        'DVT': df_raw.iloc[3:, 10].fillna('cái'),                        # Col K (Index 10)
-        'Nhom_SP': df_raw.iloc[3:, 12].fillna(''),                      # Col M (Index 12)
-        'So_Luong_Tong_DH_Raw': df_raw.iloc[3:, 13],                    # Col N (Index 13)
-        
-        # Số lượng từng nhóm sản phẩm
-        'SL_KheRangLuoc': df_raw.iloc[3:, 14].apply(clean_number),     # Col O (Index 14)
-        'SL_GoiChau': df_raw.iloc[3:, 15].apply(clean_number),         # Col P (Index 15)
-        'SL_KheRangLuocNhom': df_raw.iloc[3:, 16].apply(clean_number), # Col Q (Index 16)
-        'SL_LoXoNeo': df_raw.iloc[3:, 17].apply(clean_number),         # Col R (Index 17)
-        'SL_ThanhNeo': df_raw.iloc[3:, 18].apply(clean_number),        # Col S (Index 18)
-        'SL_SPKhac': df_raw.iloc[3:, 19].apply(clean_number),          # Col T (Index 19)
-        'SL_TamDeNeo': df_raw.iloc[3:, 20].apply(clean_number),        # Col U (Index 20)
-        'SL_StelPin': df_raw.iloc[3:, 21].apply(clean_number),         # Col V (Index 21)
-        'SL_VanKhuon': df_raw.iloc[3:, 22].apply(clean_number),        # Col W (Index 22)
-        'SL_TamVCO': df_raw.iloc[3:, 23].apply(clean_number),          # Col X (Index 23)
-        'SL_HeCotPhuKien': df_raw.iloc[3:, 24].apply(clean_number),    # Col Y (Index 24)
-        'SL_LanCan': df_raw.iloc[3:, 25].apply(clean_number),          # Col Z (Index 25)
-    })
+    # Khởi tạo DataFrame từ dữ liệu raw
+    df = pd.DataFrame()
+    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()         # Col B (Index 1)
+    df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].fillna('Chưa SX')          # Col C (Index 2)
+    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026')           # Col D (Index 3)
+    df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].fillna('Chưa phân loại')      # Col E (Index 4)
+    df['NV_KD'] = df_raw.iloc[3:, 6].fillna('Chưa phân loại')          # Col G (Index 6)
+    df['Du_An'] = df_raw.iloc[3:, 7].fillna('')                         # Col H (Index 7)
+    df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')                      # Col J (Index 9)
+    df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')                        # Col K (Index 10)
+    df['Nhom_SP'] = df_raw.iloc[3:, 12].fillna('')                      # Col M (Index 12)
+    df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]                    # Col N (Index 13)
 
-    # Xử lý các mốc thời gian
+    # Số lượng từng nhóm sản phẩm
+    df['SL_KheRangLuoc'] = df_raw.iloc[3:, 14].apply(clean_number)     # Col O (Index 14)
+    df['SL_GoiChau'] = df_raw.iloc[3:, 15].apply(clean_number)         # Col P (Index 15)
+    df['SL_KheRangLuocNhom'] = df_raw.iloc[3:, 16].apply(clean_number) # Col Q (Index 16)
+    df['SL_LoXoNeo'] = df_raw.iloc[3:, 17].apply(clean_number)         # Col R (Index 17)
+    df['SL_ThanhNeo'] = df_raw.iloc[3:, 18].apply(clean_number)        # Col S (Index 18)
+    df['SL_SPKhac'] = df_raw.iloc[3:, 19].apply(clean_number)          # Col T (Index 19)
+    df['SL_TamDeNeo'] = df_raw.iloc[3:, 20].apply(clean_number)        # Col U (Index 20)
+    df['SL_StelPin'] = df_raw.iloc[3:, 21].apply(clean_number)         # Col V (Index 21)
+    df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)        # Col W (Index 22)
+    df['SL_TamVCO'] = df_raw.iloc[3:, 23].apply(clean_number)          # Col X (Index 23)
+    df['SL_HeCotPhuKien'] = df_raw.iloc[3:, 24].apply(clean_number)    # Col Y (Index 24)
+    df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)          # Col Z (Index 25)
+
+    # Mốc thời gian
     df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB
     df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
     df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
@@ -102,7 +101,7 @@ def load_data():
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
-    # Xử lý tổng sản lượng đơn
+    # Tính toán tổng sản lượng
     df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number)
     df['SL_NhomKhac'] = (
         df['SL_KheRangLuocNhom'] + df['SL_LoXoNeo'] + df['SL_ThanhNeo'] +
@@ -112,7 +111,7 @@ def load_data():
     df['SL_TongCalculated'] = df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] + df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
 
-    # Chuẩn hóa Ngày Đặt Hàng & Ngày Nhập Kho
+    # Chuẩn hóa Thời gian Đặt hàng & Nhập kho
     df['Ngay_DatHang_DT'] = df['Ngay_Chot_DT'].fillna(df['Ngay_Duyet_DT'])
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_DatHang'] = df['Nam_DatHang'].replace('nan', None).fillna(df['Nam_DatHang_Raw']).fillna('2026')
@@ -129,7 +128,7 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. KHU VỰC BỘ LỌC ĐA CHIỀU (5 CỘT)
+    # 3. KHU VỰC BỘ LỌC 5 CỘT
     st.subheader("🎯 Bộ Lọc Báo Cáo Tiến Độ")
     f1, f2, f3, f4, f5 = st.columns(5)
 
@@ -157,15 +156,14 @@ try:
         bp_list = ['Tất cả bộ phận'] + sorted([x for x in df['Bo_Phan_KD'].unique() if str(x) not in ['', 'nan']])
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
 
-    # Bộ lọc Nhân viên KD (Phụ thuộc vào Bộ phận KD đã chọn)
+    # Bộ lọc Nhân viên KD
     col_nv, _ = st.columns([2, 3])
     with col_nv:
         df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC ĐỘC LẬP CHO ĐẶT HÀNG VÀ NHẬP KHO
-    # --- LUỒNG 1: ĐẶT HÀNG ---
+    # 4. LỌC ĐẶT HÀNG VÀ NHẬP KHO
     df_dh = df.copy()
     if nam_sel != 'Tất cả các năm':
         df_dh = df_dh[df_dh['Nam_DatHang'] == nam_sel]
@@ -185,7 +183,6 @@ try:
     if nv_sel != 'Tất cả NVKD':
         df_dh = df_dh[df_dh['NV_KD'] == nv_sel]
 
-    # --- LUỒNG 2: NHẬP KHO ---
     df_nk = df[df['Da_Nhap_Kho']].copy()
     if nam_sel != 'Tất cả các năm':
         df_nk = df_nk[df_nk['Nam_NhapKho'] == nam_sel]
@@ -235,7 +232,6 @@ try:
             sum_dh = df_dh_tab[q_col].sum()
             sum_nk = df_nk_tab[q_col].sum()
 
-            # Thẻ chỉ số tổng
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Số Đơn Đặt Hàng", f"{len(df_dh_tab)} Đơn")
             m2.metric("📦 Tổng SL Đặt Hàng", f"{sum_dh:,.2f}")
@@ -259,7 +255,6 @@ try:
                     df_nk_tab['Nhom_SP'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
 
-            # Chia 2 Sub-tab để xem chi tiết Đặt hàng và Nhập kho
             sub_tab1, sub_tab2 = st.tabs(["📋 Đơn Đặt Hàng Phụ Trách", "🏭 Đợt Nhập Kho Thực Tế"])
 
             with sub_tab1:
