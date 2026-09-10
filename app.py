@@ -1,39 +1,79 @@
 import streamlit as st
 import pandas as pd
+import io
+from datetime import datetime
 
-# 1. CẤU HÌNH TRANG WEB
+# 1. CẤU HÌNH TRANG WEB & TẠO CSS MÀU XANH NỔI BẬT
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
     .main { padding: 1rem; }
-    .stMetric { background-color: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #e9ecef; }
-    div[data-baseweb="tab-list"] { gap: 8px; }
+    
+    /* TIÊU ĐỀ CHÍNH MÀU XANH IN ĐẬM */
+    .main-title {
+        color: #0d47a1;
+        font-size: 32px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        letter-spacing: 0.5px;
+    }
+    .sub-title {
+        color: #1565c0;
+        font-size: 22px;
+        font-weight: 700;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    
+    /* THẺ METRIC THỐNG KÊ MÀU XANH NỔI BẬT */
+    div[data-testid="stMetric"] {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        padding: 12px 16px;
+        border-radius: 10px;
+        border-left: 5px solid #1976d2;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #0d47a1 !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #1565c0 !important;
+        font-weight: 800 !important;
+    }
+
+    /* ĐỊNH DẠNG TAB HỆ THỐNG */
+    div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
         border-radius: 20px !important;
-        padding: 8px 16px !important;
+        padding: 8px 20px !important;
         background-color: #f1f3f5 !important;
-        border: 1px solid #dee2e6 !important;
-        font-weight: 600 !important;
+        border: 1px solid #ced4da !important;
+        font-weight: 700 !important;
+        color: #495057 !important;
     }
     button[aria-selected="true"] {
-        background-color: #0d6efd !important;
+        background-color: #1976d2 !important;
         color: white !important;
+        box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# TIÊU ĐỀ VÀ NÚT CẬP NHẬT
+# TIÊU ĐỀ
 col_title, col_btn = st.columns([3, 1])
 with col_title:
-    st.title("🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026")
+    st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
 with col_btn:
     st.write("")
     if st.button("🔄 Cập nhật dữ liệu mới nhất", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-# 2. HÀM ĐỌC & LÀM SẠCH DỮ LIỆU TỪ GOOGLE SHEETS
+# 2. XỬ LÝ DỮ LIỆU TỪ GOOGLE SHEETS
 GGS_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/edit?usp=sharing"
 
 def get_ggs_export_url(url):
@@ -66,9 +106,52 @@ def clean_status(val):
     val_str = str(val).strip()
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '']:
         return 'Chưa SX'
-    if val_str.lower() == 'done':
-        return 'Done'
     return val_str
+
+# HÀM CẢNH BÁO TIẾN ĐỘ
+def tinh_canh_bao_tien_do(row):
+    if row['Da_Nhap_Kho']:
+        return "✅ Đã Hoàn Thành"
+    if pd.isna(row['Ngay_Duyet_AB']):
+        return "⚪ Chưa Duyệt SX (AB trống)"
+    if pd.isna(row['Ngay_Chot_AG']):
+        return "⚠️ Thiếu Ngày Chốt AG"
+    
+    ngay_hien_tai = pd.to_datetime('today').normalize()
+    songay_con_lai = (row['Ngay_Chot_AG'] - ngay_hien_tai).days
+    
+    if songay_con_lai <= 5:
+        return "🔴 Rất Nguy Hiểm (≤ 5 Ngày)"
+    elif songay_con_lai <= 7:
+        return "🟠 Cấp Bách / Ưu Tiên (6-7 Ngày)"
+    elif songay_con_lai <= 15:
+        return "🟡 Tiến Độ Bình Thường (8-15 Ngày)"
+    elif songay_con_lai <= 30:
+        return "🟢 An Toàn (16-30 Ngày)"
+    else:
+        return "🔵 Rất An Toàn (> 30 Ngày)"
+
+def style_canh_bao(val):
+    if '🔴' in str(val):
+        return 'background-color: #ffc9c9; color: #900C3F; font-weight: bold;'
+    elif '🟠' in str(val):
+        return 'background-color: #ffe5b4; color: #d35400; font-weight: bold;'
+    elif '🟡' in str(val):
+        return 'background-color: #fff9c4; color: #856404;'
+    elif '🟢' in str(val):
+        return 'background-color: #d4edda; color: #155724;'
+    elif '⚪' in str(val):
+        return 'background-color: #e9ecef; color: #6c757d;'
+    return ''
+
+# HÀM XUẤT FILE EXCEL CHO 3 SHEET (ĐẶT MỚI, TỒN TRƯỚC, ĐÃ NHẬP KHO)
+def convert_df_to_excel(df_moi, df_ton, df_done, cols, col_qty, label_ky):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_moi[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}")
+        df_ton[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}")
+        df_done[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}")
+    return output.getvalue()
 
 @st.cache_data(ttl=5)
 def load_data():
@@ -84,16 +167,14 @@ def load_data():
     df['Du_An'] = df_raw.iloc[3:, 7].fillna('')                         # Col H
     df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')                      # Col J
     df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')                        # Col K
-    df['Nhom_SP'] = df_raw.iloc[3:, 12].fillna('')                      # Col M
     df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]                    # Col N
 
-    # CỘT SẢN PHẨM CHÍNH
+    # CỘT SẢN PHẨM CHÍNH & PHỤ
     df['SL_KheRangLuoc'] = df_raw.iloc[3:, 14].apply(clean_number)
     df['SL_GoiChau'] = df_raw.iloc[3:, 15].apply(clean_number)
     df['SL_TamVCO'] = df_raw.iloc[3:, 23].apply(clean_number)
     df['SL_HeCotPhuKien'] = df_raw.iloc[3:, 24].apply(clean_number)
 
-    # CỘT SẢN PHẨM PHỤ
     df['SL_KheRangLuocNhom'] = df_raw.iloc[3:, 16].apply(clean_number)
     df['SL_LoXoNeo'] = df_raw.iloc[3:, 17].apply(clean_number)
     df['SL_ThanhNeo'] = df_raw.iloc[3:, 18].apply(clean_number)
@@ -103,13 +184,13 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)
 
-    # MỐC THỜI GIAN
+    # CÁC CỘT MỐC THỜI GIAN (AB, AC, AG)
     df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA
-    df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB
-    df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
+    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')  # Col AB - Duyệt SX
+    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce') # Col AC - KD Cần
+    df['Ngay_Chot_AG'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')   # Col AG - Chốt với KD
     df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
 
-    # LỌC DÒNG RỐNG SẢN PHẨM / ĐƠN HÀNG
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
@@ -122,28 +203,28 @@ def load_data():
     df['SL_TongCalculated'] = df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] + df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
 
-    df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
+    df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_AG']).fillna(df['Ngay_Duyet_AB'])
     
-    # NĂM / THÁNG / QUÝ ĐẶT HÀNG
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
     df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
-    # NĂM / THÁNG / QUÝ NHẬP KHO THỰC TẾ
     df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_DT'].notna())
     df['Thang_NhapKho'] = df['Ngay_NhapKho_DT'].dt.month.fillna(0).astype(int)
     df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter.fillna(0).astype(int)
     df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year.fillna(2026).astype(int)
+
+    df['Canh_Bao_Tien_Do'] = df.apply(tinh_canh_bao_tien_do, axis=1)
 
     return df
 
 try:
     df = load_data()
 
-    # 3. BỘ LỌC GIAO DIỆN HỆ THỐNG
-    st.subheader("🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng")
+    # 3. BỘ LỌC TÌM KIẾM
+    st.markdown('<div class="sub-title">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>', unsafe_allow_html=True)
     f1, f2, f3, f4, f5 = st.columns(5)
 
     with f1:
@@ -157,7 +238,7 @@ try:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8)
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8) # Tháng 9
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
             quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=0)
@@ -179,7 +260,7 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. TÁCH DỮ LIỆU THEO ĐÚNG ĐIỀU KIỆN QUÝ / THÁNG
+    # 4. TÁCH DỮ LIỆU
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -190,46 +271,27 @@ try:
     cond_nam_dat = (df_base['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
     cond_nam_nk = (df_base['Nam_NhapKho'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
 
-    # Định nghĩa danh sách các tháng trong kỳ lọc
     if ky_sel == "Theo Tháng" and thang_sel:
-        list_thang_trong_ky = [thang_sel]
         cond_ky_moi = (df_base['Thang_DatHang'] == thang_sel)
         cond_ky_truoc = (df_base['Thang_DatHang'] < thang_sel)
         cond_ky_nk = (df_base['Thang_NhapKho'] == thang_sel)
         ten_ky_hien_thi = f"Tháng {thang_sel}"
     elif ky_sel == "Theo Quý" and quy_sel:
         map_quy_thang = {1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]}
-        list_thang_trong_ky = map_quy_thang[quy_sel]
-        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
-        cond_ky_truoc = df_base['Thang_DatHang'] < list_thang_trong_ky[0]
+        list_thang = map_quy_thang[quy_sel]
+        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang)
+        cond_ky_truoc = df_base['Thang_DatHang'] < list_thang[0]
         cond_ky_nk = df_base['Quy_NhapKho'] == quy_sel
         ten_ky_hien_thi = f"Quý {quy_sel}"
-    elif ky_sel == "6 Tháng Đầu Năm":
-        list_thang_trong_ky = list(range(1, 7))
-        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
-        cond_ky_truoc = False
-        cond_ky_nk = df_base['Thang_NhapKho'].isin(list_thang_trong_ky)
-        ten_ky_hien_thi = "6 Tháng Đầu Năm"
-    elif ky_sel == "6 Tháng Cuối Năm":
-        list_thang_trong_ky = list(range(7, 13))
-        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
-        cond_ky_truoc = df_base['Thang_DatHang'] < 7
-        cond_ky_nk = df_base['Thang_NhapKho'].isin(list_thang_trong_ky)
-        ten_ky_hien_thi = "6 Tháng Cuối Năm"
-    else: # Cả Năm
+    else:
         cond_ky_moi = True
         cond_ky_truoc = False
         cond_ky_nk = True
         ten_ky_hien_thi = "Cả Năm"
 
-    # Đơn Đặt Mới trong kỳ
     df_moi = df_base[cond_nam_dat & cond_ky_moi].copy()
-
-    # Đơn Tồn Từ Kỳ Trước
     cond_chua_done = (~df_base['Da_Nhap_Kho']) & (~df_base['Trang_Thai_SX'].str.lower().isin(['tạm dừng sx', 'tam dung sx']))
     df_ton = df_base[cond_nam_dat & cond_ky_truoc & cond_chua_done].copy()
-
-    # Đơn Đã Nhập Kho Thực Tế Trong Kỳ
     df_done = df_base[cond_nam_nk & cond_ky_nk & df_base['Da_Nhap_Kho']].copy()
 
     if tt_sel != 'Tất cả tình trạng':
@@ -239,7 +301,7 @@ try:
 
     st.markdown("---")
 
-    # 5. HIỂN THỊ CÁC TAB BÁO CÁO SẢN LƯỢNG
+    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM & NÚT XUẤT EXCEL
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -251,101 +313,88 @@ try:
         '📋 Sản Phẩm Khác': 'SL_NhomKhac'
     }
 
-    cols_display = ['So_DH', 'Trang_Thai_SX', 'Thang_DatHang', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT']
-
-    label_dat_moi = f"📦 Đặt Mới {ten_ky_hien_thi}"
-    label_ton_cu = f"⏳ Tồn Trước {ten_ky_hien_thi}"
+    cols_display = [
+        'So_DH', 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 
+        'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT'
+    ]
 
     for i, tname in enumerate(tab_names):
         with tabs[i]:
             if tname == '📊 Dashboard Tổng':
                 q_col = 'So_Luong_Tong_DH'
-                sub_moi = df_moi.copy()
-                sub_ton = df_ton.copy()
-                sub_done = df_done.copy()
+                sub_moi, sub_ton, sub_done = df_moi.copy(), df_ton.copy(), df_done.copy()
             else:
                 q_col = qty_mapping[tname]
                 sub_moi = df_moi[df_moi[q_col] > 0].copy()
                 sub_ton = df_ton[df_ton[q_col] > 0].copy()
                 sub_done = df_done[df_done[q_col] > 0].copy()
 
-            # TÍNH TOÁN METRIC CHUẨN THEO ĐÚNG BẢNG TỔNG HỢP GOOGLE SHEETS
             sl_dat_moi = sub_moi[q_col].sum()
             sl_ton_chuyen_sang = sub_ton[q_col].sum()
             sl_tong_can_sx = sl_dat_moi + sl_ton_chuyen_sang
             sl_da_nhap_kho = sub_done[q_col].sum()
             sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
 
-            # METRIC ĐỒNG BỘ HOÀN TOÀN
             m1, m2, m3, m4, m5 = st.columns(5)
-            m1.metric(label_dat_moi, f"{sl_dat_moi:,.2f}")
-            m2.metric(label_ton_cu, f"{sl_ton_chuyen_sang:,.2f}")
+            m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
+            m2.metric(f"⏳ Tồn Trước {ten_ky_hien_thi}", f"{sl_ton_chuyen_sang:,.2f}")
             m3.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
             m4.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
             m5.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            search_kw = st.text_input(f"🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
-
+            
+            # THANH TÌM KIẾM VÀ NÚT TRÍCH EXCEL Ở GÓC PHẢI
+            col_search, col_export = st.columns([3, 1])
+            with col_search:
+                search_kw = st.text_input(f"🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
+            
             if search_kw:
-                sub_moi = sub_moi[
-                    sub_moi['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_moi['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_moi['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
-                ]
-                sub_ton = sub_ton[
-                    sub_ton['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_ton['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_ton['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
-                ]
-                sub_done = sub_done[
-                    sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_done['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    sub_done['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
-                ]
+                sub_moi = sub_moi[sub_moi['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                sub_ton = sub_ton[sub_ton['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                sub_done = sub_done[sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
 
-            # HIỂN THỊ CHI TIẾT BẢNG TƯƠNG ỨNG
+            # NÚT XUẤT EXCEL TẠI ĐÂY
+            with col_export:
+                st.write("")
+                st.write("")
+                excel_data = convert_df_to_excel(sub_moi, sub_ton, sub_done, cols_display, q_col, ten_ky_hien_thi)
+                tab_clean = tname.replace('📊 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
+                st.download_button(
+                    label=f"📥 Trích Excel ({tab_clean})",
+                    data=excel_data,
+                    file_name=f"Bao_Cao_{tab_clean}_{ten_ky_hien_thi}_{nam_sel}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key=f"btn_ex_{i}"
+                )
+
+            # HIỂN THỊ CÁC BẢNG DỮ LIỆU
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                 f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
                 f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
                 f"✅ Đơn Đã Nhập Kho Trong {ten_ky_hien_thi} ({len(sub_done)} dòng)"
             ])
 
+            column_cfg = {
+                "So_DH": "Mã ĐH", 
+                "Canh_Bao_Tien_Do": st.column_config.TextColumn("🚨 Cảnh Báo Tiến Độ", width="medium"),
+                "Trang_Thai_SX": "Trạng Thái",
+                "Ngay_Duyet_AB": st.column_config.DateColumn("Duyệt SX (AB)", format="DD/MM/YYYY"),
+                "Ngay_KD_Can_AC": st.column_config.DateColumn("KD Cần (AC)", format="DD/MM/YYYY"),
+                "Ngay_Chot_AG": st.column_config.DateColumn("Chốt SX (AG)", format="DD/MM/YYYY"),
+                "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", "Quy_Cach": "Quy Cách", "DVT": "ĐVT",
+                q_col: st.column_config.NumberColumn("Số Lượng", format="%.2f")
+            }
+
             with sub_tab1:
-                st.dataframe(
-                    sub_moi[cols_display + [q_col]],
-                    column_config={
-                        "So_DH": "Mã ĐH", "Trang_Thai_SX": "Trạng Thái", "Thang_DatHang": "Tháng Đặt",
-                        "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", 
-                        "Quy_Cach": "Quy Cách Chủng Loại", "DVT": "ĐVT",
-                        q_col: st.column_config.NumberColumn(f"SL Đặt {ten_ky_hien_thi}", format="%.2f")
-                    },
-                    use_container_width=True, hide_index=True
-                )
+                st.dataframe(sub_moi[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab2:
-                st.dataframe(
-                    sub_ton[cols_display + [q_col]],
-                    column_config={
-                        "So_DH": "Mã ĐH", "Trang_Thai_SX": "Trạng Thái", "Thang_DatHang": "Tháng Đặt",
-                        "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", 
-                        "Quy_Cach": "Quy Cách Chủng Loại", "DVT": "ĐVT",
-                        q_col: st.column_config.NumberColumn("SL Tồn Đọng", format="%.2f")
-                    },
-                    use_container_width=True, hide_index=True
-                )
+                st.dataframe(sub_ton[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab3:
-                st.dataframe(
-                    sub_done[cols_display + [q_col]],
-                    column_config={
-                        "So_DH": "Mã ĐH", "Trang_Thai_SX": "Trạng Thái", "Thang_DatHang": "Tháng Đặt",
-                        "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", 
-                        "Quy_Cach": "Quy Cách Chủng Loại", "DVT": "ĐVT",
-                        q_col: st.column_config.NumberColumn(f"SL Nhập Kho {ten_ky_hien_thi}", format="%.2f")
-                    },
-                    use_container_width=True, hide_index=True
-                )
+                st.dataframe(sub_done[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Lỗi kết nối hoặc xử lý dữ liệu từ Google Sheets: {e}")
+    st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
