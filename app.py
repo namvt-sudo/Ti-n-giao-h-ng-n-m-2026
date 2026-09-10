@@ -106,13 +106,13 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)
 
-    # MỐC THỜI GIAN
+    # MỐC THỜI GIAN & CỘT AH
     df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA
     df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB
     df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
+    df['Ngay_NhapKho_Raw'] = df_raw.iloc[3:, 33].fillna('').astype(str).str.strip()              # Col AH
 
-    # LỌC CÁC DÒNG TIÊU ĐỀ & DÒNG RỐNG
+    # LỌC DÒNG RỐNG & TIÊU ĐỀ
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
@@ -127,7 +127,7 @@ def load_data():
 
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     
-    # LẤY NĂM ĐẶT HÀNG CHUẨN
+    # NĂM ĐẶT HÀNG
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
@@ -135,8 +135,8 @@ def load_data():
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
     df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
-    # CỜ ĐÁNH DẤU ĐẪ NHẬP KHO
-    df['Da_Nhap_Kho'] = df['Trang_Thai_SX'].astype(str).str.lower() == 'done'
+    # ĐIỀU KIỆN DONE/NHẬP KHO: Hoặc Trạng thái = 'Done' HOẶC Cột AH có ghi ngày
+    df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_Raw'] != '')
 
     return df
 
@@ -180,13 +180,12 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC DỮ LIỆU CẢI TIẾN
+    # 4. LOGIC LỌC DỮ LIỆU
     df_dh = df.copy()
 
-    # TH 1: Người dùng chủ động chọn Tình Trạng SX cụ thể -> BỎ QUA lọc thời gian để rà soát toàn bộ
     if tt_sel != 'Tất cả tình trạng':
+        # Bỏ qua lọc thời gian nếu chọn Tình Trạng SX cụ thể
         df_dh = df_dh[df_dh['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-    # TH 2: Chọn "Tất cả tình trạng" -> Áp dụng bộ lọc thời gian + Gom đơn chưa hoàn thành
     else:
         cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
         cond_thuoc_ky = True
@@ -207,14 +206,11 @@ try:
         cond_dang_lam = (~df_dh['Trang_Thai_SX'].str.lower().isin(['done', 'tạm dừng sx', 'tam dung sx']))
         df_dh = df_dh[cond_nam & (cond_thuoc_ky | (cond_truoc_ky & cond_dang_lam))]
 
-    # Áp dụng bộ lọc Bộ Phận & NVKD
+    # Áp dụng lọc Bộ Phận & NVKD
     if bp_sel != 'Tất cả bộ phận':
         df_dh = df_dh[df_dh['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
         df_dh = df_dh[df_dh['NV_KD'] == nv_sel]
-
-    # DỮ LIỆU NHẬP KHO: Lấy tất cả dòng có đánh dấu Done trong danh sách lọc
-    df_nk = df_dh[df_dh['Da_Nhap_Kho']].copy()
 
     st.markdown("---")
 
@@ -236,17 +232,17 @@ try:
         with tabs[i]:
             if tname == '📊 Dashboard Tổng':
                 df_dh_tab = df_dh.copy()
-                df_nk_tab = df_nk.copy()
                 q_col = 'So_Luong_Tong_DH'
             else:
                 q_col = qty_mapping[tname]
                 df_dh_tab = df_dh[df_dh[q_col] > 0].copy()
-                df_nk_tab = df_nk[df_nk[q_col] > 0].copy()
 
             sum_dh = df_dh_tab[q_col].sum()
-            sum_nk = df_nk_tab[q_col].sum()
+            
+            # TÍNH TỔNG SL NHẬP KHO: Lấy tổng số lượng đặt của các dòng đã ĐÃ NHẬP KHO (Done / Có ngày ở cột AH)
+            sum_nk = df_dh_tab[df_dh_tab['Da_Nhap_Kho']][q_col].sum()
 
-            # ĐẾM SỐ LƯỢNG MÃ ĐƠN HÀNG DUY NHẤT (NUNIQUE)
+            # ĐẾM SỐ LƯỢNG MÃ ĐƠN HÀNG DUY NHẤT
             so_luong_don_hang = df_dh_tab['So_DH'].nunique()
 
             m1, m2, m3, m4 = st.columns(4)
@@ -264,6 +260,9 @@ try:
                     df_dh_tab['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
                     df_dh_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
+
+            # DỮ LIỆU BẢNG
+            df_nk_tab = df_dh_tab[df_dh_tab['Da_Nhap_Kho']].copy()
 
             sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Danh Sách Đã Nhập Kho (Done)"])
 
