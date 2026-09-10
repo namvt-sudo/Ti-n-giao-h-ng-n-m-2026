@@ -210,9 +210,9 @@ try:
         cond_thuoc_ky = df_dh['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
         cond_truoc_ky = df_dh['Thang_DatHang'] < 7
 
-    # Logic lọc thông minh:
-    # 1. Chọn Tình Trạng SX cụ thể (Ví dụ: "Tạm dừng SX") -> Hiện chính xác các đơn mang trạng thái đó.
-    # 2. Chọn "Tất cả tình trạng" -> Gom đơn phát sinh trong kỳ + các đơn đang dở dang chưa hoàn thành từ trước.
+    # Logic lọc:
+    # - Nếu chọn Trạng thái cụ thể -> Hiển thị đúng trạng thái đó
+    # - Nếu chọn Tất cả -> Gom đơn phát sinh trong kỳ + đơn tồn đọng
     if tt_sel != 'Tất cả tình trạng':
         df_dh = df_dh[cond_nam & cond_thuoc_ky & (df_dh['Trang_Thai_SX'] == tt_sel)]
     else:
@@ -271,8 +271,11 @@ try:
             sum_dh = df_dh_tab[q_col].sum()
             sum_nk = df_nk_tab[q_col].sum()
 
+            # ĐẾM SỐ MÃ ĐƠN HÀNG DUY NHẤT (NUNIQUE)
+            so_luong_don_hang = df_dh_tab['So_DH'].nunique()
+
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("📋 Tổng Số Đơn Quản Lý", f"{len(df_dh_tab)} Đơn")
+            m1.metric("📋 Tổng Số Đơn Quản Lý", f"{so_luong_don_hang} Đơn")
             m2.metric("📦 Tổng SL Đặt Hàng", f"{sum_dh:,.2f}")
             m3.metric("✅ Tổng SL Nhập Kho", f"{sum_nk:,.2f}")
             m4.metric("⏳ Chênh Lệch Đặt - Nhập", f"{(sum_dh - sum_nk):,.2f}")
@@ -290,7 +293,7 @@ try:
             sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Đợt Nhập Kho Thực Tế"])
 
             with sub_tab1:
-                st.caption(f"Bao gồm đơn phát sinh trong kỳ + đơn tồn chưa hoàn thành ({len(df_dh_tab)} dòng):")
+                st.caption(f"Bao gồm đơn phát sinh trong kỳ + đơn tồn chưa hoàn thành ({len(df_dh_tab)} chi tiết hàng):")
                 st.dataframe(
                     df_dh_tab[cols_display + [q_col]],
                     column_config={
@@ -303,7 +306,7 @@ try:
                 )
 
             with sub_tab2:
-                st.caption(f"Danh sách các đợt hoàn thành nhập kho trong kỳ ({len(df_nk_tab)} dòng):")
+                st.caption(f"Danh sách các đợt hoàn thành nhập kho trong kỳ ({len(df_nk_tab)} chi tiết hàng):")
                 st.dataframe(
                     df_nk_tab[cols_display + [q_col]],
                     column_config={
