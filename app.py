@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from datetime import datetime
 
-# 1. CẤU HÌNH TRANG WEB & TẠO CSS MÀU XANH NỔI BẬT
+# 1. CẤU HÌNH TRANG WEB & TẠO CSS MÀU XANH NỔI BẬT + HEADER BẢNG IN ĐẬM
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -59,6 +59,15 @@ st.markdown("""
         background-color: #1976d2 !important;
         color: white !important;
         box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4) !important;
+    }
+
+    /* ĐỊNH DẠNG HEADER TIÊU ĐỀ BẢNG DỮ LIỆU (MÀU XANH, IN ĐẬM, CHỮ TRẮNG) */
+    div[data-testid="stDataFrame"] th {
+        background-color: #0d47a1 !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        text-align: center !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -329,8 +338,6 @@ try:
                 sub_ton = df_ton[df_ton[q_col] > 0].copy()
                 sub_done = df_done[df_done[q_col] > 0].copy()
 
-            # THỨ TỰ CỘT CHUẨN THEO YÊU CẦU MỚI:
-            # Bộ phận -> NVKD -> Dự án -> Mã ĐH -> Quy cách -> ĐVT -> Số lượng -> Cảnh báo tiến độ -> Trạng thái -> Duyệt AB -> KD cần AC -> Chốt AG
             cols_display = [
                 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'So_DH', 'Quy_Cach', 'DVT', q_col,
                 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG'
