@@ -152,12 +152,12 @@ def apply_style_safe(styler, func, subset):
         return styler.applymap(func, subset=subset)
 
 # HÀM XUẤT FILE EXCEL CHO 3 SHEET
-def convert_df_to_excel(df_moi, df_ton, df_done, cols, col_qty, label_ky):
+def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_moi[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}"[:30])
-        df_ton[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}"[:30])
-        df_done[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}"[:30])
+        df_moi[cols].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}"[:30])
+        df_ton[cols].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}"[:30])
+        df_done[cols].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}"[:30])
     return output.getvalue()
 
 @st.cache_data(ttl=5)
@@ -318,11 +318,6 @@ try:
         '📋 Sản Phẩm Khác': 'SL_NhomKhac'
     }
 
-    cols_display = [
-        'So_DH', 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 
-        'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT'
-    ]
-
     for i, tname in enumerate(tab_names):
         with tabs[i]:
             if tname == '📊 Dashboard Tổng':
@@ -333,6 +328,13 @@ try:
                 sub_moi = df_moi[df_moi[q_col] > 0].copy()
                 sub_ton = df_ton[df_ton[q_col] > 0].copy()
                 sub_done = df_done[df_done[q_col] > 0].copy()
+
+            # THỨ TỰ CỘT CHUẨN THEO YÊU CẦU MỚI:
+            # Bộ phận -> NVKD -> Dự án -> Mã ĐH -> Quy cách -> ĐVT -> Số lượng -> Cảnh báo tiến độ -> Trạng thái -> Duyệt AB -> KD cần AC -> Chốt AG
+            cols_display = [
+                'Bo_Phan_KD', 'NV_KD', 'Du_An', 'So_DH', 'Quy_Cach', 'DVT', q_col,
+                'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG'
+            ]
 
             sl_dat_moi = sub_moi[q_col].sum()
             sl_ton_chuyen_sang = sub_ton[q_col].sum()
@@ -361,7 +363,7 @@ try:
             with col_export:
                 st.write("")
                 st.write("")
-                excel_data = convert_df_to_excel(sub_moi, sub_ton, sub_done, cols_display, q_col, ten_ky_hien_thi)
+                excel_data = convert_df_to_excel(sub_moi, sub_ton, sub_done, cols_display, ten_ky_hien_thi)
                 tab_clean = tname.replace('📊 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
                 st.download_button(
                     label=f"📥 Trích Excel ({tab_clean})",
@@ -379,24 +381,28 @@ try:
             ])
 
             column_cfg = {
-                "So_DH": "Mã ĐH", 
+                "Bo_Phan_KD": "Bộ Phận", 
+                "NV_KD": "NVKD", 
+                "Du_An": "Dự Án", 
+                "So_DH": "Mã ĐH",
+                "Quy_Cach": "Quy Cách", 
+                "DVT": "ĐVT",
+                q_col: st.column_config.NumberColumn("Số Lượng", format="%.2f"),
                 "Canh_Bao_Tien_Do": st.column_config.TextColumn("🚨 Cảnh Báo Tiến Độ", width="medium"),
                 "Trang_Thai_SX": "Trạng Thái",
                 "Ngay_Duyet_AB": st.column_config.DateColumn("Duyệt SX (AB)", format="DD/MM/YYYY"),
                 "Ngay_KD_Can_AC": st.column_config.DateColumn("KD Cần (AC)", format="DD/MM/YYYY"),
-                "Ngay_Chot_AG": st.column_config.DateColumn("Chốt SX (AG)", format="DD/MM/YYYY"),
-                "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", "Quy_Cach": "Quy Cách", "DVT": "ĐVT",
-                q_col: st.column_config.NumberColumn("Số Lượng", format="%.2f")
+                "Ngay_Chot_AG": st.column_config.DateColumn("Chốt SX (AG)", format="DD/MM/YYYY")
             }
 
             with sub_tab1:
-                st.dataframe(apply_style_safe(sub_moi[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_moi[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab2:
-                st.dataframe(apply_style_safe(sub_ton[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_ton[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab3:
-                st.dataframe(apply_style_safe(sub_done[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_done[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
 except Exception as e:
     st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
