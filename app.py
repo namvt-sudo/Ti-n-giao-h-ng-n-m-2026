@@ -107,7 +107,7 @@ def load_data():
     df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA
     df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB
     df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
-    df['Ngay_NhapKho_Raw'] = df_raw.iloc[3:, 33].fillna('').astype(str).str.strip()              # Col AH
+    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
 
     # LỌC DÒNG RỐNG SẢN PHẨM / ĐƠN HÀNG
     df = df[df['So_DH'].notna()]
@@ -124,15 +124,18 @@ def load_data():
 
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     
+    # NĂM / THÁNG / QUÝ ĐẶT HÀNG
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
-    
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
     df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
-    # ĐIỀU KIỆN DONE (Trạng thái Done hoặc Có ghi ngày nhập kho cột AH)
-    df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_Raw'] != '')
+    # NĂM / THÁNG / QUÝ NHẬP KHO THỰC TẾ
+    df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_DT'].notna())
+    df['Thang_NhapKho'] = df['Ngay_NhapKho_DT'].dt.month.fillna(0).astype(int)
+    df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter.fillna(0).astype(int)
+    df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year.fillna(2026).astype(int)
 
     return df
 
@@ -154,7 +157,7 @@ try:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8) # Mặc định Tháng 9
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8)
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
             quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=0)
@@ -176,7 +179,7 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC TÁCH DỮ LIỆU ĐƠN HÀNG CHUẨN XÁC
+    # 4. TÁCH DỮ LIỆU THEO ĐÚNG ĐIỀU KIỆN QUÝ / THÁNG
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -184,43 +187,59 @@ try:
     if nv_sel != 'Tất cả NVKD':
         df_base = df_base[df_base['NV_KD'] == nv_sel]
 
-    cond_nam = (df_base['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+    cond_nam_dat = (df_base['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+    cond_nam_nk = (df_base['Nam_NhapKho'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
 
+    # Định nghĩa danh sách các tháng trong kỳ lọc
     if ky_sel == "Theo Tháng" and thang_sel:
+        list_thang_trong_ky = [thang_sel]
         cond_ky_moi = (df_base['Thang_DatHang'] == thang_sel)
         cond_ky_truoc = (df_base['Thang_DatHang'] < thang_sel)
+        cond_ky_nk = (df_base['Thang_NhapKho'] == thang_sel)
         ten_ky_hien_thi = f"Tháng {thang_sel}"
     elif ky_sel == "Theo Quý" and quy_sel:
-        cond_ky_moi = (df_base['Quy_DatHang'] == quy_sel)
-        cond_ky_truoc = (df_base['Quy_DatHang'] < quy_sel)
+        map_quy_thang = {1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]}
+        list_thang_trong_ky = map_quy_thang[quy_sel]
+        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
+        cond_ky_truoc = df_base['Thang_DatHang'] < list_thang_trong_ky[0]
+        cond_ky_nk = df_base['Quy_NhapKho'] == quy_sel
         ten_ky_hien_thi = f"Quý {quy_sel}"
     elif ky_sel == "6 Tháng Đầu Năm":
-        cond_ky_moi = df_base['Thang_DatHang'].isin([1, 2, 3, 4, 5, 6])
+        list_thang_trong_ky = list(range(1, 7))
+        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
         cond_ky_truoc = False
+        cond_ky_nk = df_base['Thang_NhapKho'].isin(list_thang_trong_ky)
         ten_ky_hien_thi = "6 Tháng Đầu Năm"
     elif ky_sel == "6 Tháng Cuối Năm":
-        cond_ky_moi = df_base['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
+        list_thang_trong_ky = list(range(7, 13))
+        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang_trong_ky)
         cond_ky_truoc = df_base['Thang_DatHang'] < 7
+        cond_ky_nk = df_base['Thang_NhapKho'].isin(list_thang_trong_ky)
         ten_ky_hien_thi = "6 Tháng Cuối Năm"
-    else:
+    else: # Cả Năm
         cond_ky_moi = True
         cond_ky_truoc = False
+        cond_ky_nk = True
         ten_ky_hien_thi = "Cả Năm"
 
-    # TẬP 1: Đơn đặt mới trong kỳ
-    df_moi = df_base[cond_nam & cond_ky_moi].copy()
+    # Đơn Đặt Mới trong kỳ
+    df_moi = df_base[cond_nam_dat & cond_ky_moi].copy()
 
-    # TẬP 2: Đơn tồn đọng từ kỳ trước chuyển sang (chưa hoàn thành ở kỳ trước)
+    # Đơn Tồn Từ Kỳ Trước
     cond_chua_done = (~df_base['Da_Nhap_Kho']) & (~df_base['Trang_Thai_SX'].str.lower().isin(['tạm dừng sx', 'tam dung sx']))
-    df_ton = df_base[cond_nam & cond_ky_truoc & cond_chua_done].copy()
+    df_ton = df_base[cond_nam_dat & cond_ky_truoc & cond_chua_done].copy()
+
+    # Đơn Đã Nhập Kho Thực Tế Trong Kỳ
+    df_done = df_base[cond_nam_nk & cond_ky_nk & df_base['Da_Nhap_Kho']].copy()
 
     if tt_sel != 'Tất cả tình trạng':
         df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
         df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+        df_done = df_done[df_done['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
 
     st.markdown("---")
 
-    # 5. HIỂN THỊ CÁC TAB VÀ THỐNG KÊ METRIC
+    # 5. HIỂN THỊ CÁC TAB BÁO CÁO SẢN LƯỢNG
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -243,29 +262,26 @@ try:
                 q_col = 'So_Luong_Tong_DH'
                 sub_moi = df_moi.copy()
                 sub_ton = df_ton.copy()
+                sub_done = df_done.copy()
             else:
                 q_col = qty_mapping[tname]
                 sub_moi = df_moi[df_moi[q_col] > 0].copy()
                 sub_ton = df_ton[df_ton[q_col] > 0].copy()
+                sub_done = df_done[df_done[q_col] > 0].copy()
 
-            # BẢNG TẬP HỢP CÁC ĐƠN ĐÃ XỬ LÝ XONG (DONE/NHẬP KHO)
-            df_done_moi = sub_moi[sub_moi['Da_Nhap_Kho']].copy()
-            df_done_ton = sub_ton[sub_ton['Da_Nhap_Kho']].copy()
-            df_done_all = pd.concat([df_done_moi, df_done_ton]).drop_duplicates()
-
-            # TÍNH TOÁN CÁC METRIC SẢN LƯỢNG CHUẨN XÁC
+            # TÍNH TOÁN METRIC CHUẨN THEO ĐÚNG BẢNG TỔNG HỢP GOOGLE SHEETS
             sl_dat_moi = sub_moi[q_col].sum()
             sl_ton_chuyen_sang = sub_ton[q_col].sum()
             sl_tong_can_sx = sl_dat_moi + sl_ton_chuyen_sang
-            sl_da_nhap_kho = df_done_all[q_col].sum()
+            sl_da_nhap_kho = sub_done[q_col].sum()
             sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
 
-            # HIỂN THỊ METRIC SỐ LIỆU
+            # METRIC ĐỒNG BỘ HOÀN TOÀN
             m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric(label_dat_moi, f"{sl_dat_moi:,.2f}")
             m2.metric(label_ton_cu, f"{sl_ton_chuyen_sang:,.2f}")
             m3.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
-            m4.metric("✅ Đã Nhập Kho (Done)", f"{sl_da_nhap_kho:,.2f}")
+            m4.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
             m5.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -282,17 +298,17 @@ try:
                     sub_ton['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
                     sub_ton['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
-                df_done_all = df_done_all[
-                    df_done_all['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    df_done_all['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    df_done_all['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
+                sub_done = sub_done[
+                    sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    sub_done['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    sub_done['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
 
-            # SUB TABS BẢNG CHI TIẾT
+            # HIỂN THỊ CHI TIẾT BẢNG TƯƠNG ỨNG
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                 f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
                 f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
-                f"✅ Đơn Đã Nhập Kho Done ({len(df_done_all)} dòng)"
+                f"✅ Đơn Đã Nhập Kho Trong {ten_ky_hien_thi} ({len(sub_done)} dòng)"
             ])
 
             with sub_tab1:
@@ -321,12 +337,12 @@ try:
 
             with sub_tab3:
                 st.dataframe(
-                    df_done_all[cols_display + [q_col]],
+                    sub_done[cols_display + [q_col]],
                     column_config={
                         "So_DH": "Mã ĐH", "Trang_Thai_SX": "Trạng Thái", "Thang_DatHang": "Tháng Đặt",
                         "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án", 
                         "Quy_Cach": "Quy Cách Chủng Loại", "DVT": "ĐVT",
-                        q_col: st.column_config.NumberColumn("SL Đã Nhập Kho", format="%.2f")
+                        q_col: st.column_config.NumberColumn(f"SL Nhập Kho {ten_ky_hien_thi}", format="%.2f")
                     },
                     use_container_width=True, hide_index=True
                 )
