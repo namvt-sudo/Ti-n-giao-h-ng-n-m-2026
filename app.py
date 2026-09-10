@@ -41,20 +41,21 @@ def get_ggs_export_url(url):
     gid = "984933238" # Tab Theo dõi ĐH
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
 
+# 🟢 HÀM XỬ LÝ SỐ ĐÃ SỬA LỖI HIỂN THỊ HÀNG NGHÌN (2.140 -> 2140)
 def clean_number(val):
     if pd.isna(val) or val is None:
         return 0.0
     val_str = str(val).strip().replace('\xa0', '').replace(' ', '')
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
-    has_comma, has_dot = ',' in val_str, '.' in val_str
-    if has_comma and has_dot:
-        if val_str.rfind(',') > val_str.rfind('.'):
-            val_str = val_str.replace('.', '').replace(',', '.')
-        else:
-            val_str = val_str.replace(',', '')
-    elif has_comma:
-        val_str = val_str.replace(',', '.')
+    
+    # Nếu có dấu chấm và không có dấu phẩy (dạng phân cách hàng nghìn 2.140)
+    if '.' in val_str and ',' not in val_str:
+        val_str = val_str.replace('.', '')
+    # Nếu dùng dấu phẩy làm thập phân hoặc ngăn cách
+    elif ',' in val_str:
+        val_str = val_str.replace('.', '').replace(',', '.')
+
     try:
         return float(val_str)
     except:
@@ -94,18 +95,11 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)        # Col W (Index 22)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)          # Col Z (Index 25)
 
-    # ---------------------------------------------------------
-    # MỐC THỜI GIAN: ĐÃ ĐIỀU CHỈNH CHUẨN CỘT AA (INDEX 26)
-    # ---------------------------------------------------------
-    # Col AA (Index 26): Ngày BPKD gửi ĐH (Lấy chuẩn làm Ngày Đặt Hàng)
-    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   
-    
-    # Col AB (Index 27) & Col AG (Index 32): Dùng làm dự phòng nếu cột AA trống
-    df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   
-    df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    
-    
-    # Col AH (Index 33): Ngày thực tế nhập kho
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') 
+    # MỐC THỜI GIAN: ĐÃ CẬP NHẬT CỘT AA (INDEX 26) LÀM NGÀY ĐẶT HÀNG
+    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA (Index 26)
+    df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB (Index 27)
+    df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG (Index 32)
+    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH (Index 33)
 
     # Lọc bỏ các dòng tiêu đề rác
     df = df[df['So_DH'].notna()]
@@ -121,7 +115,7 @@ def load_data():
     df['SL_TongCalculated'] = df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] + df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
 
-    # Chuẩn hóa Thời gian Đặt hàng (Ưu tiên Col AA -> Col AG -> Col AB)
+    # Chuẩn hóa Thời gian Đặt hàng (Ưu tiên Col AA -> AG -> AB)
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_DatHang'] = df['Nam_DatHang'].replace('nan', None).fillna(df['Nam_DatHang_Raw']).fillna('2026')
