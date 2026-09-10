@@ -74,7 +74,7 @@ def load_data():
     df = pd.DataFrame()
     df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()          # Col B
     df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].apply(clean_status)       # Col C
-    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026')           # Col D
+    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026').astype(str).str.strip() # Col D
     df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].astype(str).str.strip().fillna('Chưa phân loại')  # Col E
     df['NV_KD'] = df_raw.iloc[3:, 6].astype(str).str.strip().fillna('Chưa phân loại')      # Col G
     df['Du_An'] = df_raw.iloc[3:, 7].fillna('')                         # Col H
@@ -118,7 +118,12 @@ def load_data():
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
 
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
-    df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(2026).astype(int)
+    
+    # Ưu tiên lấy năm từ ngày đặt hàng, nếu không có lấy từ cột Nam_DatHang_Raw (Mặc định 2026)
+    df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
+        pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
+    ).fillna(2026).astype(int)
+    
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
     df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
@@ -169,18 +174,15 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC THÔNG MINH (BAO GỒM ĐƠN TỒN DỞ DANG TỪ CÁC THÁNG TRƯỚC)
+    # 4. LOGIC LỌC ĐƯỢC CẢI TIẾN
     df_dh = df.copy()
 
     # Điều kiện 1: Năm
     cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
 
-    # Điều kiện 2: Trạng thái Chưa xong (Đang SX, Chưa SX...)
-    cond_dang_lam = (df_dh['Trang_Thai_SX'].str.lower() != 'done')
-
-    # Điều kiện 3: Thuộc chính xác Kỳ báo cáo (Đặt hàng trong tháng/quý chọn)
+    # Điều kiện 2: Kỳ Báo Cáo
     cond_thuoc_ky = True
-    cond_truoc_ky = False  # Các đơn đặt hàng trước kỳ được chọn
+    cond_truoc_ky = False
 
     if ky_sel == "Theo Tháng" and thang_sel:
         cond_thuoc_ky = (df_dh['Thang_DatHang'] == thang_sel)
@@ -194,12 +196,17 @@ try:
         cond_thuoc_ky = df_dh['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
         cond_truoc_ky = df_dh['Thang_DatHang'] < 7
 
-    # THỰC HIỆN GHÉP LOGIC: (Thuộc kỳ chọn) HOẶC (Đặt trước kỳ chọn VÀ chưa làm xong)
-    df_dh = df_dh[cond_nam & (cond_thuoc_ky | (cond_truoc_ky & cond_dang_lam))]
-
-    # Áp dụng bộ lọc phụ (Tình trạng, Bộ phận, Nhân viên)
+    # Logic lọc thông minh: 
+    # Nếu chọn Tình Trạng SX cụ thể -> Áp dụng đúng bộ lọc đó.
+    # Nếu chọn "Tất cả tình trạng" -> Gom đơn trong kỳ + các đơn tồn đang sản xuất/chưa sản xuất từ trước kỳ.
     if tt_sel != 'Tất cả tình trạng':
-        df_dh = df_dh[df_dh['Trang_Thai_SX'] == tt_sel]
+        df_dh = df_dh[cond_nam & cond_thuoc_ky & (df_dh['Trang_Thai_SX'] == tt_sel)]
+    else:
+        # Đơn dở dang tồn đọng = Chưa xong VÀ không bị Tạm dừng
+        cond_dang_lam = (~df_dh['Trang_Thai_SX'].str.lower().isin(['done', 'tạm dừng sx', 'tam dung sx']))
+        df_dh = df_dh[cond_nam & (cond_thuoc_ky | (cond_truoc_ky & cond_dang_lam))]
+
+    # Áp dụng các bộ lọc bộ phận & nhân viên
     if bp_sel != 'Tất cả bộ phận':
         df_dh = df_dh[df_dh['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
