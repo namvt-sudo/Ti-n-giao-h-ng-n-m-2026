@@ -176,19 +176,16 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC TÁCH DỮ LIỆU ĐƠN HÀNG THÔNG MINH
+    # 4. LOGIC TÁCH DỮ LIỆU ĐƠN HÀNG CHUẨN XÁC
     df_base = df.copy()
 
-    # Lọc Bộ Phận & NVKD
     if bp_sel != 'Tất cả bộ phận':
         df_base = df_base[df_base['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
         df_base = df_base[df_base['NV_KD'] == nv_sel]
 
-    # Điều kiện Năm
     cond_nam = (df_base['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
 
-    # Phân loại Đơn mới phát sinh trong kỳ vs Tồn từ kỳ trước
     if ky_sel == "Theo Tháng" and thang_sel:
         cond_ky_moi = (df_base['Thang_DatHang'] == thang_sel)
         cond_ky_truoc = (df_base['Thang_DatHang'] < thang_sel)
@@ -205,7 +202,7 @@ try:
         cond_ky_moi = df_base['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
         cond_ky_truoc = df_base['Thang_DatHang'] < 7
         ten_ky_hien_thi = "6 Tháng Cuối Năm"
-    else: # Cả năm
+    else:
         cond_ky_moi = True
         cond_ky_truoc = False
         ten_ky_hien_thi = "Cả Năm"
@@ -213,18 +210,17 @@ try:
     # TẬP 1: Đơn đặt mới trong kỳ
     df_moi = df_base[cond_nam & cond_ky_moi].copy()
 
-    # TẬP 2: Đơn tồn đọng từ kỳ trước chuyển sang (Chưa Done)
+    # TẬP 2: Đơn tồn đọng từ kỳ trước chuyển sang (chưa hoàn thành ở kỳ trước)
     cond_chua_done = (~df_base['Da_Nhap_Kho']) & (~df_base['Trang_Thai_SX'].str.lower().isin(['tạm dừng sx', 'tam dung sx']))
     df_ton = df_base[cond_nam & cond_ky_truoc & cond_chua_done].copy()
 
-    # Nếu người dùng chọn Tình Trạng SX cụ thể
     if tt_sel != 'Tất cả tình trạng':
         df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
         df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
 
     st.markdown("---")
 
-    # 5. HIỂN THỊ CÁC TAB VÀ THỐNG KÊ METRIC CÓ TÊN ĐỘNG
+    # 5. HIỂN THỊ CÁC TAB VÀ THỐNG KÊ METRIC
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -238,7 +234,6 @@ try:
 
     cols_display = ['So_DH', 'Trang_Thai_SX', 'Thang_DatHang', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT']
 
-    # ĐẶT TÊN METRIC TỰ ĐỘNG THEO THÁNG / QUÝ ĐÃ CHỌN
     label_dat_moi = f"📦 Đặt Mới {ten_ky_hien_thi}"
     label_ton_cu = f"⏳ Tồn Trước {ten_ky_hien_thi}"
 
@@ -253,14 +248,19 @@ try:
                 sub_moi = df_moi[df_moi[q_col] > 0].copy()
                 sub_ton = df_ton[df_ton[q_col] > 0].copy()
 
-            # TÍNH TOÁN CÁC CON SỐ SẢN LƯỢNG
+            # BẢNG TẬP HỢP CÁC ĐƠN ĐÃ XỬ LÝ XONG (DONE/NHẬP KHO)
+            df_done_moi = sub_moi[sub_moi['Da_Nhap_Kho']].copy()
+            df_done_ton = sub_ton[sub_ton['Da_Nhap_Kho']].copy()
+            df_done_all = pd.concat([df_done_moi, df_done_ton]).drop_duplicates()
+
+            # TÍNH TOÁN CÁC METRIC SẢN LƯỢNG CHUẨN XÁC
             sl_dat_moi = sub_moi[q_col].sum()
             sl_ton_chuyen_sang = sub_ton[q_col].sum()
             sl_tong_can_sx = sl_dat_moi + sl_ton_chuyen_sang
-            sl_da_nhap_kho = sub_moi[sub_moi['Da_Nhap_Kho']][q_col].sum() + sub_ton[sub_ton['Da_Nhap_Kho']][q_col].sum()
+            sl_da_nhap_kho = df_done_all[q_col].sum()
             sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
 
-            # THỐNG KÊ METRIC TỰ ĐỘNG HIỂN THỊ TÊN THÁNG/QUÝ
+            # HIỂN THỊ METRIC SỐ LIỆU
             m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric(label_dat_moi, f"{sl_dat_moi:,.2f}")
             m2.metric(label_ton_cu, f"{sl_ton_chuyen_sang:,.2f}")
@@ -282,12 +282,17 @@ try:
                     sub_ton['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
                     sub_ton['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
+                df_done_all = df_done_all[
+                    df_done_all['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    df_done_all['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    df_done_all['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
+                ]
 
-            # HIỂN THỊ DANH SÁCH CHI TIẾT THEO CÁC SUB-TAB CÓ TÊN RÕ RÀNG
+            # SUB TABS BẢNG CHI TIẾT
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                 f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
                 f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
-                f"✅ Đơn Đã Nhập Kho Done ({len(pd.concat([sub_moi[sub_moi['Da_Nhap_Kho']], sub_ton[sub_ton['Da_Nhap_Kho']]]))}) dòng)"
+                f"✅ Đơn Đã Nhập Kho Done ({len(df_done_all)} dòng)"
             ])
 
             with sub_tab1:
@@ -315,7 +320,6 @@ try:
                 )
 
             with sub_tab3:
-                df_done_all = pd.concat([sub_moi[sub_moi['Da_Nhap_Kho']], sub_ton[sub_ton['Da_Nhap_Kho']]])
                 st.dataframe(
                     df_done_all[cols_display + [q_col]],
                     column_config={
