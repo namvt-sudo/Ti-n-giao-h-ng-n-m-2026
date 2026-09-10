@@ -45,20 +45,14 @@ def clean_number(val):
     if pd.isna(val) or val is None:
         return 0.0
     
-    # Xóa khoảng trắng & ký tự đặc biệt
     val_str = str(val).strip().replace('\xa0', '').replace(' ', '')
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
     
-    # TH 1: Có cả dấu chấm hàng nghìn và dấu phẩy thập phân (VD: 1.240,00 -> 1240.00)
     if '.' in val_str and ',' in val_str:
         val_str = val_str.replace('.', '').replace(',', '.')
-        
-    # TH 2: Chỉ có dấu phẩy (VD: 25,500 hay 25,5 -> 25.5)
     elif ',' in val_str:
         val_str = val_str.replace(',', '.')
-        
-    # TH 3: Nếu là dấu chấm hàng nghìn chuẩn VN (VD: 1.240 -> 1240)
     elif '.' in val_str:
         parts = val_str.split('.')
         if len(parts) > 1 and len(parts[-1]) == 3:
@@ -133,7 +127,7 @@ def load_data():
 
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     
-    # LẤY NĂM DẶT HÀNG CHUẨN
+    # LẤY NĂM ĐẶT HÀNG CHUẨN
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
@@ -188,44 +182,42 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC DỮ LIỆU ĐÒN BẨY & TỒN ĐỌNG
+    # 4. LOGIC LỌC TỐI ƯU THEO ĐỀ XUẤT
     df_dh = df.copy()
 
-    # Điều kiện 1: Năm đặt hàng
-    cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
-
-    # Điều kiện 2: Kỳ Báo Cáo
-    cond_thuoc_ky = True
-    cond_truoc_ky = False
-
-    if ky_sel == "Theo Tháng" and thang_sel:
-        cond_thuoc_ky = (df_dh['Thang_DatHang'] == thang_sel)
-        cond_truoc_ky = (df_dh['Thang_DatHang'] < thang_sel)
-    elif ky_sel == "Theo Quý" and quy_sel:
-        cond_thuoc_ky = (df_dh['Quy_DatHang'] == quy_sel)
-        cond_truoc_ky = (df_dh['Quy_DatHang'] < quy_sel)
-    elif ky_sel == "6 Tháng Đầu Năm":
-        cond_thuoc_ky = df_dh['Thang_DatHang'].isin([1, 2, 3, 4, 5, 6])
-    elif ky_sel == "6 Tháng Cuối Năm":
-        cond_thuoc_ky = df_dh['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
-        cond_truoc_ky = df_dh['Thang_DatHang'] < 7
-
-    # Logic lọc:
-    # - Nếu chọn Trạng thái cụ thể -> Hiển thị đúng trạng thái đó
-    # - Nếu chọn Tất cả -> Gom đơn phát sinh trong kỳ + đơn tồn đọng
+    # TH 1: Người dùng chủ động chọn Tình Trạng SX cụ thể (Ví dụ: "Đang sx", "Tạm dừng SX"...)
+    # -> BỎ QUA lọc Năm / Tháng / Kỳ để rà soát TOÀN BỘ đơn tồn trong lịch sử!
     if tt_sel != 'Tất cả tình trạng':
-        df_dh = df_dh[cond_nam & cond_thuoc_ky & (df_dh['Trang_Thai_SX'] == tt_sel)]
+        df_dh = df_dh[df_dh['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+    
+    # TH 2: Chọn "Tất cả tình trạng" -> Áp dụng điều kiện thời gian + Gom đơn chưa hoàn thành từ quá khứ
     else:
+        cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
+        cond_thuoc_ky = True
+        cond_truoc_ky = False
+
+        if ky_sel == "Theo Tháng" and thang_sel:
+            cond_thuoc_ky = (df_dh['Thang_DatHang'] == thang_sel)
+            cond_truoc_ky = (df_dh['Thang_DatHang'] < thang_sel)
+        elif ky_sel == "Theo Quý" and quy_sel:
+            cond_thuoc_ky = (df_dh['Quy_DatHang'] == quy_sel)
+            cond_truoc_ky = (df_dh['Quy_DatHang'] < quy_sel)
+        elif ky_sel == "6 Tháng Đầu Năm":
+            cond_thuoc_ky = df_dh['Thang_DatHang'].isin([1, 2, 3, 4, 5, 6])
+        elif ky_sel == "6 Tháng Cuối Năm":
+            cond_thuoc_ky = df_dh['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
+            cond_truoc_ky = df_dh['Thang_DatHang'] < 7
+
         cond_dang_lam = (~df_dh['Trang_Thai_SX'].str.lower().isin(['done', 'tạm dừng sx', 'tam dung sx']))
         df_dh = df_dh[cond_nam & (cond_thuoc_ky | (cond_truoc_ky & cond_dang_lam))]
 
-    # Áp dụng lọc bộ phận & nhân viên
+    # Áp dụng bộ lọc Bộ Phận & NVKD
     if bp_sel != 'Tất cả bộ phận':
         df_dh = df_dh[df_dh['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
         df_dh = df_dh[df_dh['NV_KD'] == nv_sel]
 
-    # Lọc danh sách Nhập kho
+    # Lọc danh sách Nhập kho thực tế
     df_nk = df[df['Da_Nhap_Kho']].copy()
     if nam_sel != 'Tất cả các năm':
         df_nk = df_nk[df_nk['Nam_NhapKho'] == nam_sel]
@@ -235,7 +227,7 @@ try:
         df_nk = df_nk[df_nk['Quy_NhapKho'] == quy_sel]
 
     if tt_sel != 'Tất cả tình trạng':
-        df_nk = df_nk[df_nk['Trang_Thai_SX'] == tt_sel]
+        df_nk = df_nk[df_nk['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
     if bp_sel != 'Tất cả bộ phận':
         df_nk = df_nk[df_nk['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
@@ -271,7 +263,7 @@ try:
             sum_dh = df_dh_tab[q_col].sum()
             sum_nk = df_nk_tab[q_col].sum()
 
-            # ĐẾM SỐ MÃ ĐƠN HÀNG DUY NHẤT (NUNIQUE)
+            # ĐẾM SỐ LƯỢNG MÃ ĐƠN HÀNG DUY NHẤT
             so_luong_don_hang = df_dh_tab['So_DH'].nunique()
 
             m1, m2, m3, m4 = st.columns(4)
@@ -293,7 +285,7 @@ try:
             sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Đợt Nhập Kho Thực Tế"])
 
             with sub_tab1:
-                st.caption(f"Bao gồm đơn phát sinh trong kỳ + đơn tồn chưa hoàn thành ({len(df_dh_tab)} chi tiết hàng):")
+                st.caption(f"Danh sách quản lý theo điều kiện lọc ({len(df_dh_tab)} chi tiết hàng):")
                 st.dataframe(
                     df_dh_tab[cols_display + [q_col]],
                     column_config={
