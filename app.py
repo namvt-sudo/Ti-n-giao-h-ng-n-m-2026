@@ -80,39 +80,85 @@ def load_data():
     # Đọc tất cả các dòng dạng string
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
  
+    # DÒ CỘT THEO TÊN TIÊU ĐỀ (không dùng vị trí cố định A,B,C...) để không bị lệch
+    # nếu sau này có ai chèn/xoá cột trên Google Sheet.
+    header_main = df_raw.iloc[1]   # dòng tiêu đề chính (dòng 2 Excel)
+    header_sub = df_raw.iloc[2]    # dòng tiêu đề phụ - cho các cột mốc thời gian (dòng 3 Excel)
+ 
+    def find_col_exact(text, header_row, occurrence=0, default=None):
+        matches = [i for i, h in enumerate(header_row) if not pd.isna(h) and str(h).strip().lower() == text.strip().lower()]
+        return matches[occurrence] if len(matches) > occurrence else default
+ 
+    def find_col_contains(text, header_row, default=None):
+        for i, h in enumerate(header_row):
+            if pd.isna(h):
+                continue
+            if text.lower() in str(h).strip().lower():
+                return i
+        return default
+ 
+    idx_so_dh = find_col_exact('Số ĐH', header_main, occurrence=0, default=1)
+    idx_trang_thai = find_col_exact('TÌNH TRẠNG SẢN XUẤT', header_main, default=2)
+    idx_nam = find_col_exact('Năm', header_main, default=3)
+    idx_bp = find_col_exact('Bộ phận KD', header_main, default=4)
+    idx_nv = find_col_exact('Nhân viên KD', header_main, default=6)
+    idx_duan = find_col_exact('DỰ ÁN', header_main, default=7)
+    idx_quycach = find_col_exact('QUY CÁCH CHỦNG LOẠI', header_main, default=9)
+    idx_dvt = find_col_exact('ĐVT', header_main, default=10)
+    idx_nhomsp = find_col_exact('TÊN NHÓM SẢN PHẨM', header_main, default=12)
+    idx_sl_tong = find_col_exact('Số lượng Tổng ĐH', header_main, default=13)
+    idx_khe = find_col_exact('KHE RĂNG LƯỢC', header_main, default=14)
+    idx_goi = find_col_exact('GỐI CHẬU', header_main, default=15)
+    idx_khe_nhom = find_col_exact('Khe răng lược nhôm', header_main, default=16)
+    idx_loxo = find_col_exact('LÒ XO NEO', header_main, default=17)
+    idx_thanhneo = find_col_exact('Thanh neo', header_main, default=18)
+    idx_spkhac = find_col_exact('SP KHÁC', header_main, default=19)
+    idx_tamdeneo = find_col_exact('Tấm đế neo', header_main, default=20)
+    idx_stelpin = find_col_exact('Stel pin', header_main, default=21)
+    idx_vankhuon = find_col_exact('Ván khuôn', header_main, default=22)
+    idx_tamvco = find_col_exact('TẤM VCO', header_main, default=23)
+    idx_hecot = find_col_exact('HỆ CỘT + PHỤ KIỆN VCO', header_main, default=24)
+    idx_lancan = find_col_exact('LAN CAN', header_main, default=25)
+ 
+    idx_ngay_kd_gui = find_col_contains('Ngày KD gửi ĐH', header_sub, default=26)
+    idx_ngay_duyet = find_col_contains('DUYỆT HOÀN TOÀN', header_sub, default=27)
+    idx_ngay_ycgh = find_col_contains('YCGH', header_sub, default=28)
+    idx_ngay_chot = find_col_contains('chốt lần cuối', header_sub, default=32)
+    idx_ngay_nhapkho = find_col_contains('thực tế nhập kho', header_sub, default=33)
+ 
     # Đọc dữ liệu từ dòng index 4 (dòng 5 Excel)
     df = pd.DataFrame({
-        'So_DH_Raw': df_raw.iloc[4:, 1],              # Cột B
-        'Trang_Thai_SX': df_raw.iloc[4:, 2],          # Cột C
-        'Nam_Dat_Hang_Raw': df_raw.iloc[4:, 3],       # Cột D
-        'Bo_Phan_KD': df_raw.iloc[4:, 4],             # Cột E
-        'NV_KD': df_raw.iloc[4:, 6],                 # Cột G
-        'Du_An': df_raw.iloc[4:, 7],                 # Cột H
-        'Quy_Cach': df_raw.iloc[4:, 9],              # Cột J
-        'DVT': df_raw.iloc[4:, 10],                  # Cột K
-        'Nhom_SP': df_raw.iloc[4:, 12],              # Cột M
-        'So_Luong_Tong_DH_Raw': df_raw.iloc[4:, 13],  # Cột N: Số lượng tổng ĐH
+        'So_DH_Raw': df_raw.iloc[4:, idx_so_dh],
+        'Trang_Thai_SX': df_raw.iloc[4:, idx_trang_thai],
+        'Nam_Dat_Hang_Raw': df_raw.iloc[4:, idx_nam],
+        'Bo_Phan_KD': df_raw.iloc[4:, idx_bp],
+        'NV_KD': df_raw.iloc[4:, idx_nv],
+        'Du_An': df_raw.iloc[4:, idx_duan],
+        'Quy_Cach': df_raw.iloc[4:, idx_quycach],
+        'DVT': df_raw.iloc[4:, idx_dvt],
+        'Nhom_SP': df_raw.iloc[4:, idx_nhomsp],
+        'So_Luong_Tong_DH_Raw': df_raw.iloc[4:, idx_sl_tong],
         # Mỗi nhóm sản phẩm có 1 cột riêng, giá trị = số lượng thực tế thuộc nhóm đó
-        'KheRangLuoc_Raw': df_raw.iloc[4:, 14],       # Cột O: KHE RĂNG LƯỢC
-        'GoiChau_Raw': df_raw.iloc[4:, 15],           # Cột P: GỐI CHẬU
-        'KheRangLuocNhom_Raw': df_raw.iloc[4:, 16],   # Cột Q: Khe răng lược nhôm
-        'LoXoNeo_Raw': df_raw.iloc[4:, 17],           # Cột R: LÒ XO NEO
-        'ThanhNeo_Raw': df_raw.iloc[4:, 18],          # Cột S: Thanh neo
-        'SPKhac_Raw': df_raw.iloc[4:, 19],            # Cột T: SP KHÁC
-        'TamDeNeo_Raw': df_raw.iloc[4:, 20],          # Cột U: Tấm đế neo
-        'StelPin_Raw': df_raw.iloc[4:, 21],           # Cột V: Stel pin
-        'VanKhuon_Raw': df_raw.iloc[4:, 22],          # Cột W: Ván khuôn
-        'TamVCO_Raw': df_raw.iloc[4:, 23],            # Cột X: TẤM VCO
-        'HeCotPhuKien_Raw': df_raw.iloc[4:, 24],      # Cột Y: HỆ CỘT + PHỤ KIỆN VCO
-        'LanCan_Raw': df_raw.iloc[4:, 25],            # Cột Z: LAN CAN
+        'KheRangLuoc_Raw': df_raw.iloc[4:, idx_khe],
+        'GoiChau_Raw': df_raw.iloc[4:, idx_goi],
+        'KheRangLuocNhom_Raw': df_raw.iloc[4:, idx_khe_nhom],
+        'LoXoNeo_Raw': df_raw.iloc[4:, idx_loxo],
+        'ThanhNeo_Raw': df_raw.iloc[4:, idx_thanhneo],
+        'SPKhac_Raw': df_raw.iloc[4:, idx_spkhac],
+        'TamDeNeo_Raw': df_raw.iloc[4:, idx_tamdeneo],
+        'StelPin_Raw': df_raw.iloc[4:, idx_stelpin],
+        'VanKhuon_Raw': df_raw.iloc[4:, idx_vankhuon],
+        'TamVCO_Raw': df_raw.iloc[4:, idx_tamvco],
+        'HeCotPhuKien_Raw': df_raw.iloc[4:, idx_hecot],
+        'LanCan_Raw': df_raw.iloc[4:, idx_lancan],
     })
  
     # Lấy các mốc thời gian
-    df['Ngay_KD_Gui_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, 26], dayfirst=True, errors='coerce')   # AA
-    df['Ngay_Duyet_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, 27], dayfirst=True, errors='coerce')    # AB
-    df['Ngay_YCGH_DT'] = pd.to_datetime(df_raw.iloc[4:, 28], dayfirst=True, errors='coerce')        # AC
-    df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, 32], dayfirst=True, errors='coerce')   # AG
-    df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, 33], dayfirst=True, errors='coerce')    # AH
+    df['Ngay_KD_Gui_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_kd_gui], dayfirst=True, errors='coerce')
+    df['Ngay_Duyet_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_duyet], dayfirst=True, errors='coerce')
+    df['Ngay_YCGH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_ycgh], dayfirst=True, errors='coerce')
+    df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_chot], dayfirst=True, errors='coerce')
+    df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_nhapkho], dayfirst=True, errors='coerce')
  
     # KỸ THUẬT QUAN TRỌNG: Tự động điền dữ liệu cho các ô gộp Merge Center (ffill)
     df['So_DH'] = df['So_DH_Raw'].replace('', None).ffill()
@@ -271,13 +317,6 @@ try:
                 total_so_luong = df_tab['So_Luong_Tong_DH'].sum()
                 total_nhap_kho = df_nhap.loc[df_nhap['Da_Nhap_Kho'], 'So_Luong_Tong_DH'].sum()
                 total_ton_kho = total_so_luong - total_nhap_kho
-                # Trong tổng Nhập kho, phần nào thuộc đơn của năm KHÁC (không phải năm đang chọn) dồn về
-                if nam_sel != 'Tất cả các năm':
-                    nhap_kho_nam_khac = df_nhap.loc[
-                        df_nhap['Da_Nhap_Kho'] & (df_nhap['Nam_Dat_Hang'] != nam_sel), 'So_Luong_Tong_DH'
-                    ].sum()
-                else:
-                    nhap_kho_nam_khac = 0.0
             else:
                 qty_col = tab_qty_col[tab_name]
                 # Dòng thuộc nhóm này khi cột số lượng riêng của nhóm > 0
@@ -290,21 +329,12 @@ try:
                 # Nhập kho: lọc theo Năm dựa trên cột AH (ngày nhập kho thực tế) + trạng thái Done
                 total_nhap_kho = df_tab_nhap.loc[df_tab_nhap['Da_Nhap_Kho'], qty_col].sum()
                 total_ton_kho = total_so_luong - total_nhap_kho
-                # Trong tổng Nhập kho, phần nào thuộc đơn của năm KHÁC (không phải năm đang chọn) dồn về
-                if nam_sel != 'Tất cả các năm':
-                    nhap_kho_nam_khac = df_tab_nhap.loc[
-                        df_tab_nhap['Da_Nhap_Kho'] & (df_tab_nhap['Nam_Dat_Hang'] != nam_sel), qty_col
-                    ].sum()
-                else:
-                    nhap_kho_nam_khac = 0.0
  
-            m1, m2, m3, m4, m5 = st.columns(5)
+            m1, m2, m3, m4 = st.columns(4)
             m1.metric("📋 Tổng Số Dòng/Đơn", f"{len(df_tab)} Dòng")
             m2.metric("📦 Số lượng tổng ĐH", f"{total_so_luong:,.0f}")
             m3.metric("✅ Tổng SL Nhập Kho", f"{total_nhap_kho:,.0f}")
             m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{total_ton_kho:,.0f}")
-            m5.metric("↩️ Trong đó: NK đơn năm khác", f"{nhap_kho_nam_khac:,.0f}",
-                      help="Sản lượng nhập kho trong kỳ này nhưng thuộc đơn hàng đặt từ năm khác dồn về")
  
  
             st.markdown("<br>", unsafe_allow_html=True)
