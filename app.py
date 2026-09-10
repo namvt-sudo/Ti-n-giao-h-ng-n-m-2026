@@ -35,7 +35,13 @@ def get_ggs_export_url(url):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
  
 # HÀM BÓC TÁCH SỐ LƯỢNG AN TOÀN TUYỆT ĐỐI
-def clean_number_exact(val):
+# dvt: đơn vị tính của dòng đó (Cái/Mét/Kg...). Với đơn vị đo liên tục (Mét, Kg, Tấn...)
+# số liệu thường có phần thập phân thật (VD 41.768 mét), nên KHÔNG được coi dấu chấm là
+# dấu phân cách hàng nghìn như với Cái/Chiếc/Tấm (số nguyên, đếm được) — nếu không sẽ bị
+# thổi phồng gấp cả nghìn lần (lỗi từng gặp ở cột Khe Răng Lược).
+DON_VI_LIEN_TUC = {'mét', 'met', 'm', 'kg', 'tấn', 'tan', 'm2', 'm3'}
+ 
+def clean_number_exact(val, dvt=None):
     if pd.isna(val) or val is None:
         return 0.0
     val_str = str(val).strip()
@@ -44,6 +50,8 @@ def clean_number_exact(val):
  
     # Loại bỏ ký tự khoảng trắng không ngắt
     val_str = val_str.replace('\xa0', '').replace(' ', '')
+ 
+    is_lien_tuc = str(dvt).strip().lower() in DON_VI_LIEN_TUC if dvt is not None else False
  
     has_comma = ',' in val_str
     has_dot = '.' in val_str
@@ -56,18 +64,19 @@ def clean_number_exact(val):
             val_str = val_str.replace(',', '')
     elif has_comma:
         # Chỉ có dấu phẩy: nếu 3 chữ số sau dấu phẩy -> phân cách hàng nghìn (VD: 1,500 -> 1500)
-        # nếu không -> dấu thập phân (VD: 12,5 -> 12.5)
+        # nếu không -> dấu thập phân (VD: 12,5 -> 12.5). Với đơn vị liên tục thì luôn coi là thập phân.
         parts = val_str.split(',')
-        if len(parts) > 1 and len(parts[-1]) == 3:
+        if not is_lien_tuc and len(parts) > 1 and len(parts[-1]) == 3:
             val_str = val_str.replace(',', '')
         else:
             val_str = val_str.replace(',', '.')
     elif has_dot:
         # Chỉ có dấu chấm: nếu 3 chữ số sau dấu chấm -> phân cách hàng nghìn (VD: 1.500 -> 1500)
-        # nếu không -> giữ nguyên là dấu thập phân (VD: 12.5 vẫn là 12.5)
-        parts = val_str.split('.')
-        if len(parts) > 1 and len(parts[-1]) == 3:
-            val_str = val_str.replace('.', '')
+        # nếu không (hoặc là đơn vị liên tục như Mét/Kg) -> giữ nguyên là dấu thập phân
+        if not is_lien_tuc:
+            parts = val_str.split('.')
+            if len(parts) > 1 and len(parts[-1]) == 3:
+                val_str = val_str.replace('.', '')
  
     try:
         return float(val_str)
@@ -168,22 +177,22 @@ def load_data():
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
  
-    # Chuyển đổi Số lượng
-    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number_exact)
+    # Chuyển đổi Số lượng (kèm ĐVT của từng dòng để xử lý đúng số thập phân/hàng nghìn)
+    df['So_Luong_Tong_DH'] = df.apply(lambda r: clean_number_exact(r['So_Luong_Tong_DH_Raw'], r['DVT']), axis=1)
  
     # Số lượng riêng theo từng cột nhóm sản phẩm (nguồn chính xác nhất để lọc/tính theo nhóm)
-    df['SL_KheRangLuoc'] = df['KheRangLuoc_Raw'].apply(clean_number_exact)
-    df['SL_GoiChau'] = df['GoiChau_Raw'].apply(clean_number_exact)
-    df['SL_KheRangLuocNhom'] = df['KheRangLuocNhom_Raw'].apply(clean_number_exact)
-    df['SL_LoXoNeo'] = df['LoXoNeo_Raw'].apply(clean_number_exact)
-    df['SL_ThanhNeo'] = df['ThanhNeo_Raw'].apply(clean_number_exact)
-    df['SL_SPKhac'] = df['SPKhac_Raw'].apply(clean_number_exact)
-    df['SL_TamDeNeo'] = df['TamDeNeo_Raw'].apply(clean_number_exact)
-    df['SL_StelPin'] = df['StelPin_Raw'].apply(clean_number_exact)
-    df['SL_VanKhuon'] = df['VanKhuon_Raw'].apply(clean_number_exact)
-    df['SL_TamVCO'] = df['TamVCO_Raw'].apply(clean_number_exact)
-    df['SL_HeCotPhuKien'] = df['HeCotPhuKien_Raw'].apply(clean_number_exact)
-    df['SL_LanCan'] = df['LanCan_Raw'].apply(clean_number_exact)
+    df['SL_KheRangLuoc'] = df.apply(lambda r: clean_number_exact(r['KheRangLuoc_Raw'], r['DVT']), axis=1)
+    df['SL_GoiChau'] = df.apply(lambda r: clean_number_exact(r['GoiChau_Raw'], r['DVT']), axis=1)
+    df['SL_KheRangLuocNhom'] = df.apply(lambda r: clean_number_exact(r['KheRangLuocNhom_Raw'], r['DVT']), axis=1)
+    df['SL_LoXoNeo'] = df.apply(lambda r: clean_number_exact(r['LoXoNeo_Raw'], r['DVT']), axis=1)
+    df['SL_ThanhNeo'] = df.apply(lambda r: clean_number_exact(r['ThanhNeo_Raw'], r['DVT']), axis=1)
+    df['SL_SPKhac'] = df.apply(lambda r: clean_number_exact(r['SPKhac_Raw'], r['DVT']), axis=1)
+    df['SL_TamDeNeo'] = df.apply(lambda r: clean_number_exact(r['TamDeNeo_Raw'], r['DVT']), axis=1)
+    df['SL_StelPin'] = df.apply(lambda r: clean_number_exact(r['StelPin_Raw'], r['DVT']), axis=1)
+    df['SL_VanKhuon'] = df.apply(lambda r: clean_number_exact(r['VanKhuon_Raw'], r['DVT']), axis=1)
+    df['SL_TamVCO'] = df.apply(lambda r: clean_number_exact(r['TamVCO_Raw'], r['DVT']), axis=1)
+    df['SL_HeCotPhuKien'] = df.apply(lambda r: clean_number_exact(r['HeCotPhuKien_Raw'], r['DVT']), axis=1)
+    df['SL_LanCan'] = df.apply(lambda r: clean_number_exact(r['LanCan_Raw'], r['DVT']), axis=1)
  
     # Nhóm Khác = gộp các cột nhóm nhỏ lẻ còn lại (không phải Gối Chậu/Khe Răng Lược/Tấm VCO/Hệ Cột)
     df['SL_NhomKhac'] = (
@@ -221,6 +230,25 @@ def load_data():
     df['Quy_Cach_Clean'] = df['Quy_Cach'].fillna('').astype(str).str.strip()
     df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
  
+    # PHÁT HIỆN NHẬP NHẦM CỘT: dòng có số lượng ở 1 cột nhóm (VD cột TẤM VCO) nhưng
+    # cột M (TÊN NHÓM SẢN PHẨM) lại ghi tên một nhóm KHÁC — dấu hiệu gõ nhầm số vào sai cột
+    # (từng gặp: ĐH 47 - "Tấm bịt đầu cột PL4" ghi nhóm SP KHÁC nhưng số lại nằm ở cột TẤM VCO)
+    nhom_sp_upper = df['Nhom_SP_Clean'].str.upper()
+    canh_bao_list = []
+    for cot_ten, cot_qty, tu_khoa in [
+        ('GỐI CHẬU', 'SL_GoiChau', 'GỐI CHẬU'),
+        ('KHE RĂNG LƯỢC', 'SL_KheRangLuoc', 'KHE RĂNG LƯỢC'),
+        ('TẤM VCO', 'SL_TamVCO', 'TẤM VCO'),
+        ('HỆ CỘT + PHỤ KIỆN VCO', 'SL_HeCotPhuKien', 'HỆ CỘT'),
+    ]:
+        sai = (df[cot_qty] > 0) & (~nhom_sp_upper.str.contains(tu_khoa, na=False)) & (nhom_sp_upper != '')
+        if sai.any():
+            tmp = df.loc[sai, ['So_DH', 'Quy_Cach_Clean', 'Nhom_SP_Clean', cot_qty]].copy()
+            tmp['Cột số lượng bị nhầm'] = cot_ten
+            tmp = tmp.rename(columns={cot_qty: 'Số lượng'})
+            canh_bao_list.append(tmp)
+    df_canh_bao = pd.concat(canh_bao_list, ignore_index=True) if canh_bao_list else pd.DataFrame()
+ 
     # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_YCGH'] = df['Ngay_YCGH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
@@ -239,10 +267,21 @@ def load_data():
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month.fillna(df['Ngay_Duyet_DH_DT'].dt.month)
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter.fillna(df['Ngay_Duyet_DH_DT'].dt.quarter)
  
-    return df
+    return df, df_canh_bao
  
 try:
-    df = load_data()
+    df, df_canh_bao = load_data()
+ 
+    # Hiển thị cảnh báo nếu phát hiện dòng nhập nhầm cột số lượng
+    if not df_canh_bao.empty:
+        with st.expander(f"⚠️ Phát hiện {len(df_canh_bao)} dòng có thể bị nhập NHẦM CỘT số lượng (bấm để xem)"):
+            st.caption("Số lượng đang nằm ở 1 cột nhóm, nhưng cột 'TÊN NHÓM SẢN PHẨM' lại ghi tên nhóm khác — kiểm tra và sửa lại trên Google Sheet.")
+            st.dataframe(
+                df_canh_bao.rename(columns={
+                    'So_DH': 'Mã ĐH', 'Quy_Cach_Clean': 'Quy Cách', 'Nhom_SP_Clean': 'Cột M ghi là'
+                }),
+                use_container_width=True, hide_index=True
+            )
  
     # 3. BỘ LỌC THỜI GIAN & NHÂN SỰ
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
