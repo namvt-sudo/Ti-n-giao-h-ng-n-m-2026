@@ -35,12 +35,11 @@ def get_ggs_export_url(url):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
  
 # HÀM BÓC TÁCH SỐ LƯỢNG AN TOÀN TUYỆT ĐỐI
-# dvt: đơn vị tính của dòng đó (Cái/Mét/Kg...). Với đơn vị đo liên tục (Mét, Kg, Tấn...)
-# số liệu thường có phần thập phân thật (VD 41.768 mét), nên KHÔNG được coi dấu chấm là
-# dấu phân cách hàng nghìn như với Cái/Chiếc/Tấm (số nguyên, đếm được) — nếu không sẽ bị
-# thổi phồng gấp cả nghìn lần (lỗi từng gặp ở cột Khe Răng Lược).
-DON_VI_LIEN_TUC = {'mét', 'met', 'm', 'kg', 'tấn', 'tan', 'm2', 'm3'}
- 
+# LƯU Ý: đã bỏ hẳn quy tắc "đoán 3 chữ số sau dấu chấm/phẩy là hàng nghìn" — quy tắc đoán mò
+# này từng gây lỗi nặng theo cả 2 chiều: có lúc hiểu sai số thập phân thật (VD 41.768 mét,
+# 14.000 cái = 14, 328.000 cột = 328) thành hàng nghìn (41768, 14000, 328000 — sai gấp cả
+# nghìn lần), có lúc lại bỏ sót số thập phân thật. Giờ LUÔN coi dấu chấm là dấu thập phân
+# chuẩn (đúng chuẩn số học thông thường) — không đoán mò nữa.
 def clean_number_exact(val, dvt=None):
     if pd.isna(val) or val is None:
         return 0.0
@@ -51,32 +50,19 @@ def clean_number_exact(val, dvt=None):
     # Loại bỏ ký tự khoảng trắng không ngắt
     val_str = val_str.replace('\xa0', '').replace(' ', '')
  
-    is_lien_tuc = str(dvt).strip().lower() in DON_VI_LIEN_TUC if dvt is not None else False
- 
     has_comma = ',' in val_str
     has_dot = '.' in val_str
  
     if has_comma and has_dot:
-        # Có cả 2 dấu: dấu nào đứng sau cùng là dấu thập phân
+        # Có cả 2 dấu: dấu nào đứng sau cùng là dấu thập phân, dấu còn lại là hàng nghìn
         if val_str.rfind(',') > val_str.rfind('.'):
             val_str = val_str.replace('.', '').replace(',', '.')
         else:
             val_str = val_str.replace(',', '')
     elif has_comma:
-        # Chỉ có dấu phẩy: nếu 3 chữ số sau dấu phẩy -> phân cách hàng nghìn (VD: 1,500 -> 1500)
-        # nếu không -> dấu thập phân (VD: 12,5 -> 12.5). Với đơn vị liên tục thì luôn coi là thập phân.
-        parts = val_str.split(',')
-        if not is_lien_tuc and len(parts) > 1 and len(parts[-1]) == 3:
-            val_str = val_str.replace(',', '')
-        else:
-            val_str = val_str.replace(',', '.')
-    elif has_dot:
-        # Chỉ có dấu chấm: nếu 3 chữ số sau dấu chấm -> phân cách hàng nghìn (VD: 1.500 -> 1500)
-        # nếu không (hoặc là đơn vị liên tục như Mét/Kg) -> giữ nguyên là dấu thập phân
-        if not is_lien_tuc:
-            parts = val_str.split('.')
-            if len(parts) > 1 and len(parts[-1]) == 3:
-                val_str = val_str.replace('.', '')
+        # Chỉ có dấu phẩy -> luôn coi là dấu thập phân (VD: 12,5 -> 12.5)
+        val_str = val_str.replace(',', '.')
+    # Chỉ có dấu chấm -> giữ nguyên, đã đúng chuẩn số học (VD: 14.000 -> 14.0, 41.768 -> 41.768)
  
     try:
         return float(val_str)
