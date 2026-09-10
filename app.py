@@ -8,9 +8,10 @@ st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng",
 
 st.markdown("""
     <style>
+    /* Nền tổng thể và khoảng cách */
     .main { padding: 1rem; }
     
-    /* TIÊU ĐỀ CHÍNH MÀU XANH IN ĐẬM */
+    /* TIÊU ĐỀ CHÍNH NỔI BẬT - MÀU XANH IN ĐẬM */
     .main-title {
         color: #0d47a1;
         font-size: 32px;
@@ -27,7 +28,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
     
-    /* THẺ METRIC THỐNG KÊ MÀU XANH NỔI BẬT */
+    /* THẺ METRIC THỐNG KÊ MÀU XANH BẮT MẮT */
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
         padding: 12px 16px;
@@ -45,7 +46,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* ĐỊNH DẠNG TAB HỆ THỐNG */
+    /* ĐỊNH DẠNG CÁC TAB NỔI BẬT */
     div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
         border-radius: 20px !important;
@@ -63,7 +64,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# TIÊU ĐỀ
+# TIÊU ĐỀ NỔI BẬT
 col_title, col_btn = st.columns([3, 1])
 with col_title:
     st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
@@ -108,12 +109,16 @@ def clean_status(val):
         return 'Chưa SX'
     return val_str
 
-# HÀM CẢNH BÁO TIẾN ĐỘ
+# HÀM PHÂN LOẠI CẢNH BÁO TIẾN ĐỘ SẢN XUẤT
 def tinh_canh_bao_tien_do(row):
     if row['Da_Nhap_Kho']:
         return "✅ Đã Hoàn Thành"
+    
+    # Kiểm tra Ngày AB (Cột AB - Duyệt SX)
     if pd.isna(row['Ngay_Duyet_AB']):
         return "⚪ Chưa Duyệt SX (AB trống)"
+    
+    # Kiểm tra Ngày AG (Cột AG - Cam kết giao)
     if pd.isna(row['Ngay_Chot_AG']):
         return "⚠️ Thiếu Ngày Chốt AG"
     
@@ -131,6 +136,7 @@ def tinh_canh_bao_tien_do(row):
     else:
         return "🔵 Rất An Toàn (> 30 Ngày)"
 
+# TÔ MÀU CHO TỪNG DÒNG TRONG BẢNG DỮ LIỆU
 def style_canh_bao(val):
     if '🔴' in str(val):
         return 'background-color: #ffc9c9; color: #900C3F; font-weight: bold;'
@@ -144,7 +150,7 @@ def style_canh_bao(val):
         return 'background-color: #e9ecef; color: #6c757d;'
     return ''
 
-# HÀM XUẤT FILE EXCEL CHO 3 SHEET (ĐẶT MỚI, TỒN TRƯỚC, ĐÃ NHẬP KHO)
+# HÀM XUẤT FILE EXCEL
 def convert_df_to_excel(df_moi, df_ton, df_done, cols, col_qty, label_ky):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -169,7 +175,7 @@ def load_data():
     df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')                        # Col K
     df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]                    # Col N
 
-    # CỘT SẢN PHẨM CHÍNH & PHỤ
+    # SẢN PHẨM CHÍNH & PHỤ
     df['SL_KheRangLuoc'] = df_raw.iloc[3:, 14].apply(clean_number)
     df['SL_GoiChau'] = df_raw.iloc[3:, 15].apply(clean_number)
     df['SL_TamVCO'] = df_raw.iloc[3:, 23].apply(clean_number)
@@ -184,13 +190,14 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)
 
-    # CÁC CỘT MỐC THỜI GIAN (AB, AC, AG)
+    # ĐỌC MỐC THỜI GIAN THEO CÁC CỘT MỚI (AB, AC, AG)
     df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA
-    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')  # Col AB - Duyệt SX
-    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce') # Col AC - KD Cần
+    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')  # Col AB - Duyệt hoàn toàn
+    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce') # Col AC - Ngày KD cần
     df['Ngay_Chot_AG'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')   # Col AG - Chốt với KD
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
+    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH - Nhập kho
 
+    # LỌC DÒNG RỐNG
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
@@ -216,6 +223,7 @@ def load_data():
     df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter.fillna(0).astype(int)
     df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year.fillna(2026).astype(int)
 
+    # TÍNH CẢNH BÁO
     df['Canh_Bao_Tien_Do'] = df.apply(tinh_canh_bao_tien_do, axis=1)
 
     return df
@@ -238,7 +246,7 @@ try:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8) # Tháng 9
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8) # Mặc định Tháng 9
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
             quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=0)
@@ -260,7 +268,7 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. TÁCH DỮ LIỆU
+    # 4. TÁCH DỮ LIỆU CẢNH BÁO
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -301,7 +309,7 @@ try:
 
     st.markdown("---")
 
-    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM & NÚT XUẤT EXCEL
+    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -344,7 +352,7 @@ try:
 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # THANH TÌM KIẾM VÀ NÚT TRÍCH EXCEL Ở GÓC PHẢI
+            # TÌM KIẾM VÀ NÚT XUẤT EXCEL
             col_search, col_export = st.columns([3, 1])
             with col_search:
                 search_kw = st.text_input(f"🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
@@ -354,7 +362,6 @@ try:
                 sub_ton = sub_ton[sub_ton['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
                 sub_done = sub_done[sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
 
-            # NÚT XUẤT EXCEL TẠI ĐÂY
             with col_export:
                 st.write("")
                 st.write("")
@@ -369,7 +376,7 @@ try:
                     key=f"btn_ex_{i}"
                 )
 
-            # HIỂN THỊ CÁC BẢNG DỮ LIỆU
+            # BẢNG HIỂN THỊ DỮ LIỆU CÓ TÔ MÀU CẢNH BÁO
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                 f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
                 f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
