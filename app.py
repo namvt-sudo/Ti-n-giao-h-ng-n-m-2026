@@ -179,11 +179,24 @@ def load_data():
     })
  
     # Lấy các mốc thời gian
-    df['Ngay_KD_Gui_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_kd_gui], dayfirst=True, errors='coerce')
-    df['Ngay_Duyet_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_duyet], dayfirst=True, errors='coerce')
-    df['Ngay_YCGH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_ycgh], dayfirst=True, errors='coerce')
-    df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_chot], dayfirst=True, errors='coerce')
-    df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_nhapkho], dayfirst=True, errors='coerce')
+    # TỰ ĐỘNG chọn cách đọc ngày (Ngày/Tháng/Năm hay Tháng/Ngày/Năm) — vì Google Sheet CSV
+    # xuất ra định dạng ngày có thể khác nhau tuỳ thiết lập, ép cứng 1 kiểu dễ làm rỗng/sai
+    # hàng loạt ngày → khiến nhiều đơn "biến mất" khỏi phép tính theo năm.
+    def parse_date_robust(series, ten_cot=''):
+        d_dayfirst = pd.to_datetime(series, dayfirst=True, errors='coerce')
+        d_monthfirst = pd.to_datetime(series, dayfirst=False, errors='coerce')
+        if d_dayfirst.notna().sum() >= d_monthfirst.notna().sum():
+            debug_notes.append(f"Cột ngày '{ten_cot}': dùng kiểu Ngày/Tháng/Năm — {d_dayfirst.notna().sum()}/{len(series)} dòng đọc được ngày hợp lệ")
+            return d_dayfirst
+        else:
+            debug_notes.append(f"Cột ngày '{ten_cot}': dùng kiểu Tháng/Ngày/Năm — {d_monthfirst.notna().sum()}/{len(series)} dòng đọc được ngày hợp lệ")
+            return d_monthfirst
+ 
+    df['Ngay_KD_Gui_DH_DT'] = parse_date_robust(df_raw.iloc[4:, idx_ngay_kd_gui], 'Ngày KD gửi ĐH (AA)')
+    df['Ngay_Duyet_DH_DT'] = parse_date_robust(df_raw.iloc[4:, idx_ngay_duyet], 'Ngày duyệt hoàn toàn (AB)')
+    df['Ngay_YCGH_DT'] = parse_date_robust(df_raw.iloc[4:, idx_ngay_ycgh], 'Ngày YCGH (AC)')
+    df['Ngay_Chot_Cuoi_DT'] = parse_date_robust(df_raw.iloc[4:, idx_ngay_chot], 'Ngày chốt cuối (AG)')
+    df['Ngay_Nhap_Kho_DT'] = parse_date_robust(df_raw.iloc[4:, idx_ngay_nhapkho], 'Ngày thực tế nhập kho (AH)')
  
     # KỸ THUẬT QUAN TRỌNG: Tự động điền dữ liệu cho các ô gộp Merge Center (ffill)
     df['So_DH'] = df['So_DH_Raw'].replace('', None).ffill()
