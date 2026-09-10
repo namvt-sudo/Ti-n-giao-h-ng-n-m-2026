@@ -94,9 +94,14 @@ def load_data():
     header_main = df_raw.iloc[1]   # dòng tiêu đề chính (dòng 2 Excel)
     header_sub = df_raw.iloc[2]    # dòng tiêu đề phụ - cho các cột mốc thời gian (dòng 3 Excel)
  
+    debug_notes = []
+ 
     def find_col_exact(text, header_row, occurrence=0, default=None):
         matches = [i for i, h in enumerate(header_row) if not pd.isna(h) and str(h).strip().lower() == text.strip().lower()]
-        return matches[occurrence] if len(matches) > occurrence else default
+        if len(matches) > occurrence:
+            return matches[occurrence]
+        debug_notes.append(f"⚠️ Không tìm thấy cột '{text}' theo tên — dùng vị trí mặc định {default}")
+        return default
  
     def find_col_contains(text, header_row, default=None):
         for i, h in enumerate(header_row):
@@ -134,6 +139,17 @@ def load_data():
     idx_ngay_ycgh = find_col_contains('YCGH', header_sub, default=28)
     idx_ngay_chot = find_col_contains('chốt lần cuối', header_sub, default=32)
     idx_ngay_nhapkho = find_col_contains('thực tế nhập kho', header_sub, default=33)
+ 
+    debug_info = {
+        'so_cot_doc_duoc': df_raw.shape[1],
+        'so_dong_doc_duoc': df_raw.shape[0],
+        'vi_tri_cot': {
+            'GỐI CHẬU': idx_goi, 'KHE RĂNG LƯỢC': idx_khe,
+            'TẤM VCO': idx_tamvco, 'HỆ CỘT + PHỤ KIỆN VCO': idx_hecot,
+            'Số lượng Tổng ĐH': idx_sl_tong, 'ĐVT': idx_dvt,
+        },
+        'ghi_chu': debug_notes,
+    }
  
     # Đọc dữ liệu từ dòng index 4 (dòng 5 Excel)
     df = pd.DataFrame({
@@ -267,10 +283,37 @@ def load_data():
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month.fillna(df['Ngay_Duyet_DH_DT'].dt.month)
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter.fillna(df['Ngay_Duyet_DH_DT'].dt.quarter)
  
-    return df, df_canh_bao
+    return df, df_canh_bao, debug_info
  
 try:
-    df, df_canh_bao = load_data()
+    df, df_canh_bao, debug_info = load_data()
+ 
+    # KHUNG DEBUG: hiển thị Top 5 giá trị lớn nhất của từng cột nhóm kèm Mã ĐH,
+    # để tự phát hiện ngay dòng nào đang gây ra số liệu bất thường (không cần dò tay trên Sheet)
+    with st.expander("🔧 Thông tin gỡ lỗi (Debug) — bấm để xem"):
+        st.caption(f"Tổng số cột đọc được từ Google Sheet: {debug_info['so_cot_doc_duoc']} | Tổng số dòng: {debug_info['so_dong_doc_duoc']}")
+        st.write("Vị trí cột đã dò được (0 = cột A):")
+        st.json(debug_info['vi_tri_cot'])
+        if debug_info['ghi_chu']:
+            for note in debug_info['ghi_chu']:
+                st.warning(note)
+        st.markdown("---")
+        st.caption("Top 5 giá trị lớn nhất trong từng cột nhóm sản phẩm, kèm Mã ĐH và Trạng thái — nếu số nào bất thường sẽ dễ dàng thấy ngay ở đây.")
+        for label, qty_col_dbg in [
+            ('Gối Chậu', 'SL_GoiChau'),
+            ('Khe Răng Lược', 'SL_KheRangLuoc'),
+            ('Tấm VCO', 'SL_TamVCO'),
+            ('Hệ Cột + Phụ Kiện', 'SL_HeCotPhuKien'),
+        ]:
+            top5 = df.nlargest(5, qty_col_dbg)[['So_DH', 'Quy_Cach_Clean', 'DVT', 'Trang_Thai_SX_Clean', qty_col_dbg]]
+            st.markdown(f"**{label}** — tổng toàn bộ dữ liệu: {df[qty_col_dbg].sum():,.2f}")
+            st.dataframe(
+                top5.rename(columns={
+                    'So_DH': 'Mã ĐH', 'Quy_Cach_Clean': 'Quy Cách', 'Trang_Thai_SX_Clean': 'Trạng Thái',
+                    qty_col_dbg: 'Số lượng'
+                }),
+                use_container_width=True, hide_index=True
+            )
  
     # Hiển thị cảnh báo nếu phát hiện dòng nhập nhầm cột số lượng
     if not df_canh_bao.empty:
@@ -380,31 +423,49 @@ try:
  
             # 6. Ô TÌM KIẾM
             search_kw = st.text_input(f"🔍 Tìm kiếm trong tab [{tab_name}]:", key=f"search_{i}")
+ 
+            # BẢNG CHI TIẾT = HỢP của cả 2 tập (Đặt hàng theo năm AA + Nhập kho theo năm AH)
+            # để không "mất tích" dòng nào — kèm cột đánh dấu dòng đó tính vào Đặt hàng/Nhập kho
+            if tab_name == '📊 Dashboard Tổng':
+                df_dat = df_filtered
+                df_nk = df_nhap[df_nhap['Da_Nhap_Kho']]
+            else:
+                df_dat = df_tab
+                df_nk = df_tab_nhap[df_tab_nhap['Da_Nhap_Kho']]
+ 
+            df_display = pd.concat([df_dat, df_nk]).loc[lambda d: ~d.index.duplicated(keep='first')].copy()
+            df_display['Tính vào'] = df_display.index.map(
+                lambda idx: ' + '.join(filter(None, [
+                    'Đặt hàng' if idx in df_dat.index else None,
+                    'Nhập kho' if idx in df_nk.index else None,
+                ]))
+            )
+ 
             if search_kw:
-                df_tab = df_tab[
-                    df_tab['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    df_tab['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
-                    df_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
+                df_display = df_display[
+                    df_display['So_DH'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    df_display['Du_An'].astype(str).str.contains(search_kw, case=False, na=False) |
+                    df_display['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
  
             # 7. BẢNG HIỂN THỊ CHI TIẾT
             cols_show = [
-                'So_DH', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong_Tong_DH', 'DVT',
+                'So_DH', 'Tính vào', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong_Tong_DH', 'DVT',
                 'SL_Nhap_Kho', 'SL_Ton_Kho', 'Ngay_Duyet_DH', 'Ngay_YCGH', 'Ngay_Chot_Cuoi', 'Ngay_Nhap_Kho'
             ]
  
             st.dataframe(
-                df_tab[cols_show],
+                df_display[cols_show],
                 column_config={
                     "So_DH": "Mã ĐH",
                     "Nhom_SP": "Nhóm SP (Cột M)",
                     "Trang_Thai_SX": "Trạng Thái (Cột C)",
                     "Du_An": "Dự Án",
                     "Quy_Cach": "Quy Cách Chủng Loại",
-                    "So_Luong_Tong_DH": st.column_config.NumberColumn("Số lượng tổng ĐH", format="%.0f"),
+                    "So_Luong_Tong_DH": st.column_config.NumberColumn("Số lượng tổng ĐH", format="%.2f"),
                     "DVT": "ĐVT",
-                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho", format="%.0f"),
-                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn", format="%.0f"),
+                    "SL_Nhap_Kho": st.column_config.NumberColumn("Đã Nhập Kho", format="%.2f"),
+                    "SL_Ton_Kho": st.column_config.NumberColumn("Còn Tồn", format="%.2f"),
                     "Ngay_Duyet_DH": "1. Duyệt ĐH (AB)",
                     "Ngay_YCGH": "2. YCGH (AC)",
                     "Ngay_Chot_Cuoi": "3. Chốt Cuối (AG)",
@@ -416,4 +477,5 @@ try:
  
 except Exception as e:
     st.error(f"Lỗi tải hoặc xử lý dữ liệu: {e}")
+ 
  
