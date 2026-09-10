@@ -33,7 +33,7 @@ with col_btn:
         st.cache_data.clear()
         st.rerun()
 
-# 2. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEETS
+# 2. HÀM ĐỌC & LÀM SẠCH DỮ LIỆU TỪ GOOGLE SHEETS
 GGS_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/edit?usp=sharing"
 
 def get_ggs_export_url(url):
@@ -44,13 +44,26 @@ def get_ggs_export_url(url):
 def clean_number(val):
     if pd.isna(val) or val is None:
         return 0.0
+    
+    # Xóa khoảng trắng & ký tự đặc biệt
     val_str = str(val).strip().replace('\xa0', '').replace(' ', '')
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
-    if '.' in val_str and ',' not in val_str:
-        val_str = val_str.replace('.', '')
-    elif ',' in val_str:
+    
+    # TH 1: Có cả dấu chấm hàng nghìn và dấu phẩy thập phân (VD: 1.240,00 -> 1240.00)
+    if '.' in val_str and ',' in val_str:
         val_str = val_str.replace('.', '').replace(',', '.')
+        
+    # TH 2: Chỉ có dấu phẩy (VD: 25,500 hay 25,5 -> 25.5)
+    elif ',' in val_str:
+        val_str = val_str.replace(',', '.')
+        
+    # TH 3: Nếu là dấu chấm hàng nghìn chuẩn VN (VD: 1.240 -> 1240)
+    elif '.' in val_str:
+        parts = val_str.split('.')
+        if len(parts) > 1 and len(parts[-1]) == 3:
+            val_str = val_str.replace('.', '')
+
     try:
         return float(val_str)
     except:
@@ -105,6 +118,7 @@ def load_data():
     df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
     df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
 
+    # LỌC CÁC DÒNG TIÊU ĐỀ & DÒNG RỐNG
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
@@ -119,7 +133,7 @@ def load_data():
 
     df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     
-    # Ưu tiên lấy năm từ ngày đặt hàng, nếu không có lấy từ cột Nam_DatHang_Raw (Mặc định 2026)
+    # LẤY NĂM DẶT HÀNG CHUẨN
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
@@ -137,7 +151,7 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. KHU VỰC BỘ LỌC
+    # 3. KHU VỰC BỘ LỌC GIAO DIỆN
     st.subheader("🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng")
     f1, f2, f3, f4, f5 = st.columns(5)
 
@@ -174,10 +188,10 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LOGIC LỌC ĐƯỢC CẢI TIẾN
+    # 4. LOGIC LỌC DỮ LIỆU ĐÒN BẨY & TỒN ĐỌNG
     df_dh = df.copy()
 
-    # Điều kiện 1: Năm
+    # Điều kiện 1: Năm đặt hàng
     cond_nam = (df_dh['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
 
     # Điều kiện 2: Kỳ Báo Cáo
@@ -196,23 +210,22 @@ try:
         cond_thuoc_ky = df_dh['Thang_DatHang'].isin([7, 8, 9, 10, 11, 12])
         cond_truoc_ky = df_dh['Thang_DatHang'] < 7
 
-    # Logic lọc thông minh: 
-    # Nếu chọn Tình Trạng SX cụ thể -> Áp dụng đúng bộ lọc đó.
-    # Nếu chọn "Tất cả tình trạng" -> Gom đơn trong kỳ + các đơn tồn đang sản xuất/chưa sản xuất từ trước kỳ.
+    # Logic lọc thông minh:
+    # 1. Chọn Tình Trạng SX cụ thể (Ví dụ: "Tạm dừng SX") -> Hiện chính xác các đơn mang trạng thái đó.
+    # 2. Chọn "Tất cả tình trạng" -> Gom đơn phát sinh trong kỳ + các đơn đang dở dang chưa hoàn thành từ trước.
     if tt_sel != 'Tất cả tình trạng':
         df_dh = df_dh[cond_nam & cond_thuoc_ky & (df_dh['Trang_Thai_SX'] == tt_sel)]
     else:
-        # Đơn dở dang tồn đọng = Chưa xong VÀ không bị Tạm dừng
         cond_dang_lam = (~df_dh['Trang_Thai_SX'].str.lower().isin(['done', 'tạm dừng sx', 'tam dung sx']))
         df_dh = df_dh[cond_nam & (cond_thuoc_ky | (cond_truoc_ky & cond_dang_lam))]
 
-    # Áp dụng các bộ lọc bộ phận & nhân viên
+    # Áp dụng lọc bộ phận & nhân viên
     if bp_sel != 'Tất cả bộ phận':
         df_dh = df_dh[df_dh['Bo_Phan_KD'] == bp_sel]
     if nv_sel != 'Tất cả NVKD':
         df_dh = df_dh[df_dh['NV_KD'] == nv_sel]
 
-    # Lọc Nhập kho
+    # Lọc danh sách Nhập kho
     df_nk = df[df['Da_Nhap_Kho']].copy()
     if nam_sel != 'Tất cả các năm':
         df_nk = df_nk[df_nk['Nam_NhapKho'] == nam_sel]
@@ -230,7 +243,7 @@ try:
 
     st.markdown("---")
 
-    # 5. HIỂN THỊ CÁC TAB BÁO CÁO
+    # 5. HIỂN THỊ CÁC TAB VÀ THỐNG KÊ METRIC
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -277,7 +290,7 @@ try:
             sub_tab1, sub_tab2 = st.tabs(["📋 Danh Sách Đơn Hàng Cần Theo Dõi", "🏭 Đợt Nhập Kho Thực Tế"])
 
             with sub_tab1:
-                st.caption(f"Bao gồm đơn phát sinh trong kỳ + đơn tồn từ các tháng trước chưa hoàn thành ({len(df_dh_tab)} dòng):")
+                st.caption(f"Bao gồm đơn phát sinh trong kỳ + đơn tồn chưa hoàn thành ({len(df_dh_tab)} dòng):")
                 st.dataframe(
                     df_dh_tab[cols_display + [q_col]],
                     column_config={
