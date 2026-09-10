@@ -35,10 +35,6 @@ def get_ggs_export_url(url):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
  
 # HÀM BÓC TÁCH SỐ LƯỢNG AN TOÀN TUYỆT ĐỐI
-# dvt: đơn vị tính của dòng đó (Cái/Mét/Kg...). Với đơn vị đo liên tục (Mét, Kg, Tấn...)
-# số liệu thường có phần thập phân thật (VD 41.768 mét), nên KHÔNG được coi dấu chấm là
-# dấu phân cách hàng nghìn như với Cái/Chiếc/Tấm (số nguyên, đếm được) — nếu không sẽ bị
-# thổi phồng gấp cả nghìn lần (lỗi từng gặp ở cột Khe Răng Lược).
 DON_VI_LIEN_TUC = {'mét', 'met', 'm', 'kg', 'tấn', 'tan', 'm2', 'm3'}
  
 def clean_number_exact(val, dvt=None):
@@ -48,7 +44,6 @@ def clean_number_exact(val, dvt=None):
     if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
         return 0.0
  
-    # Loại bỏ ký tự khoảng trắng không ngắt
     val_str = val_str.replace('\xa0', '').replace(' ', '')
  
     is_lien_tuc = str(dvt).strip().lower() in DON_VI_LIEN_TUC if dvt is not None else False
@@ -57,22 +52,17 @@ def clean_number_exact(val, dvt=None):
     has_dot = '.' in val_str
  
     if has_comma and has_dot:
-        # Có cả 2 dấu: dấu nào đứng sau cùng là dấu thập phân
         if val_str.rfind(',') > val_str.rfind('.'):
             val_str = val_str.replace('.', '').replace(',', '.')
         else:
             val_str = val_str.replace(',', '')
     elif has_comma:
-        # Chỉ có dấu phẩy: nếu 3 chữ số sau dấu phẩy -> phân cách hàng nghìn (VD: 1,500 -> 1500)
-        # nếu không -> dấu thập phân (VD: 12,5 -> 12.5). Với đơn vị liên tục thì luôn coi là thập phân.
         parts = val_str.split(',')
         if not is_lien_tuc and len(parts) > 1 and len(parts[-1]) == 3:
             val_str = val_str.replace(',', '')
         else:
             val_str = val_str.replace(',', '.')
     elif has_dot:
-        # Chỉ có dấu chấm: nếu 3 chữ số sau dấu chấm -> phân cách hàng nghìn (VD: 1.500 -> 1500)
-        # nếu không (hoặc là đơn vị liên tục như Mét/Kg) -> giữ nguyên là dấu thập phân
         if not is_lien_tuc:
             parts = val_str.split('.')
             if len(parts) > 1 and len(parts[-1]) == 3:
@@ -86,16 +76,13 @@ def clean_number_exact(val, dvt=None):
 @st.cache_data(ttl=10)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
-    # Đọc tất cả các dòng dạng string
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
  
-    # DÒ CỘT THEO TÊN TIÊU ĐỀ (không dùng vị trí cố định A,B,C...) để không bị lệch
-    # nếu sau này có ai chèn/xoá cột trên Google Sheet.
-    header_main = df_raw.iloc[1]   # dòng tiêu đề chính (dòng 2 Excel)
-    header_sub = df_raw.iloc[2]    # dòng tiêu đề phụ - cho các cột mốc thời gian (dòng 3 Excel)
+    header_main = df_raw.iloc[1]
+    header_sub = df_raw.iloc[2]
  
     def find_col_exact(text, header_row, occurrence=0, default=None):
-        matches = [i for i, h in enumerate(header_row) if not pd.isna(h) and str(h).strip().lower() == text.strip().lower()]
+matches = [i for i, h in enumerate(header_row) if not pd.isna(h) and str(h).strip().lower() == text.strip().lower()]
         return matches[occurrence] if len(matches) > occurrence else default
  
     def find_col_contains(text, header_row, default=None):
@@ -135,7 +122,6 @@ def load_data():
     idx_ngay_chot = find_col_contains('chốt lần cuối', header_sub, default=32)
     idx_ngay_nhapkho = find_col_contains('thực tế nhập kho', header_sub, default=33)
  
-    # Đọc dữ liệu từ dòng index 4 (dòng 5 Excel)
     df = pd.DataFrame({
         'So_DH_Raw': df_raw.iloc[4:, idx_so_dh],
         'Trang_Thai_SX': df_raw.iloc[4:, idx_trang_thai],
@@ -145,9 +131,8 @@ def load_data():
         'Du_An': df_raw.iloc[4:, idx_duan],
         'Quy_Cach': df_raw.iloc[4:, idx_quycach],
         'DVT': df_raw.iloc[4:, idx_dvt],
-        'Nhom_SP': df_raw.iloc[4:, idx_nhomsp],
+'Nhom_SP': df_raw.iloc[4:, idx_nhomsp],
         'So_Luong_Tong_DH_Raw': df_raw.iloc[4:, idx_sl_tong],
-        # Mỗi nhóm sản phẩm có 1 cột riêng, giá trị = số lượng thực tế thuộc nhóm đó
         'KheRangLuoc_Raw': df_raw.iloc[4:, idx_khe],
         'GoiChau_Raw': df_raw.iloc[4:, idx_goi],
         'KheRangLuocNhom_Raw': df_raw.iloc[4:, idx_khe_nhom],
@@ -162,30 +147,34 @@ def load_data():
         'LanCan_Raw': df_raw.iloc[4:, idx_lancan],
     })
  
-    # Lấy các mốc thời gian
     df['Ngay_KD_Gui_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_kd_gui], dayfirst=True, errors='coerce')
     df['Ngay_Duyet_DH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_duyet], dayfirst=True, errors='coerce')
     df['Ngay_YCGH_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_ycgh], dayfirst=True, errors='coerce')
     df['Ngay_Chot_Cuoi_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_chot], dayfirst=True, errors='coerce')
     df['Ngay_Nhap_Kho_DT'] = pd.to_datetime(df_raw.iloc[4:, idx_ngay_nhapkho], dayfirst=True, errors='coerce')
  
-    # KỸ THUẬT QUAN TRỌNG: Tự động điền dữ liệu cho các ô gộp Merge Center (ffill)
     df['So_DH'] = df['So_DH_Raw'].replace('', None).ffill()
     df['Nam_Col_D'] = df['Nam_Dat_Hang_Raw'].replace('', None).ffill().astype(str).str.extract(r'(\d{4})')[0]
+
+    # QUAN TRỌNG: Cột "TÌNH TRẠNG SẢN XUẤT" (C) và "Ngày thực tế nhập kho" (AH) cũng
+    # nằm trong vùng ô gộp theo từng Mã ĐH (giống cột Số ĐH/Năm ở trên). Với các đơn có
+    # nhiều dòng "đợt" giao hàng riêng theo từng nhóm SP (VD: Gối Chậu ở cột P, Hệ Cột +
+    # Phụ Kiện ở cột Y), chỉ dòng đầu của đơn mới có giá trị, các dòng đợt phía dưới bị
+    # trống -> nếu không ffill sẽ bị hiểu nhầm là "chưa Done" / "không có ngày nhập kho"
+    # và bị loại khỏi tổng Nhập Kho, làm sai lệch số liệu Gối Chậu & Hệ Cột (lỗi đã gặp).
+    df['Trang_Thai_SX'] = df['Trang_Thai_SX'].replace('', None).ffill()
+    df['Ngay_Nhap_Kho_DT'] = df['Ngay_Nhap_Kho_DT'].ffill()
  
-    # Bỏ dòng tiêu đề lặp lại hoặc dòng tổng
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|TỔNG|STT|Số ĐH', case=False, na=False)]
  
-    # Chuyển đổi Số lượng (kèm ĐVT của từng dòng để xử lý đúng số thập phân/hàng nghìn)
     df['So_Luong_Tong_DH'] = df.apply(lambda r: clean_number_exact(r['So_Luong_Tong_DH_Raw'], r['DVT']), axis=1)
  
-    # Số lượng riêng theo từng cột nhóm sản phẩm (nguồn chính xác nhất để lọc/tính theo nhóm)
     df['SL_KheRangLuoc'] = df.apply(lambda r: clean_number_exact(r['KheRangLuoc_Raw'], r['DVT']), axis=1)
     df['SL_GoiChau'] = df.apply(lambda r: clean_number_exact(r['GoiChau_Raw'], r['DVT']), axis=1)
     df['SL_KheRangLuocNhom'] = df.apply(lambda r: clean_number_exact(r['KheRangLuocNhom_Raw'], r['DVT']), axis=1)
     df['SL_LoXoNeo'] = df.apply(lambda r: clean_number_exact(r['LoXoNeo_Raw'], r['DVT']), axis=1)
-    df['SL_ThanhNeo'] = df.apply(lambda r: clean_number_exact(r['ThanhNeo_Raw'], r['DVT']), axis=1)
+df['SL_ThanhNeo'] = df.apply(lambda r: clean_number_exact(r['ThanhNeo_Raw'], r['DVT']), axis=1)
     df['SL_SPKhac'] = df.apply(lambda r: clean_number_exact(r['SPKhac_Raw'], r['DVT']), axis=1)
     df['SL_TamDeNeo'] = df.apply(lambda r: clean_number_exact(r['TamDeNeo_Raw'], r['DVT']), axis=1)
     df['SL_StelPin'] = df.apply(lambda r: clean_number_exact(r['StelPin_Raw'], r['DVT']), axis=1)
@@ -194,45 +183,31 @@ def load_data():
     df['SL_HeCotPhuKien'] = df.apply(lambda r: clean_number_exact(r['HeCotPhuKien_Raw'], r['DVT']), axis=1)
     df['SL_LanCan'] = df.apply(lambda r: clean_number_exact(r['LanCan_Raw'], r['DVT']), axis=1)
  
-    # Nhóm Khác = gộp các cột nhóm nhỏ lẻ còn lại (không phải Gối Chậu/Khe Răng Lược/Tấm VCO/Hệ Cột)
     df['SL_NhomKhac'] = (
         df['SL_KheRangLuocNhom'] + df['SL_LoXoNeo'] + df['SL_ThanhNeo'] +
         df['SL_SPKhac'] + df['SL_TamDeNeo'] + df['SL_StelPin'] +
         df['SL_VanKhuon'] + df['SL_LanCan']
     )
  
-    # Lọc bỏ các dòng không có số lượng (tránh các dòng chú thích trống)
-    # Chỉ loại dòng khi TẤT CẢ các cột số lượng đều = 0 — giữ lại các dòng "đợt" nhập kho
-    # chỉ có giá trị ở cột nhóm riêng (VD cột P) dù cột N (Số lượng Tổng ĐH) trống/0
     df['SL_TongCacNhom'] = (
         df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] +
         df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
     )
     df = df[(df['So_Luong_Tong_DH'] > 0) | (df['SL_TongCacNhom'] > 0)]
  
-    # Với các dòng mà cột N trống/0 nhưng có số lượng ở cột nhóm, dùng luôn tổng các nhóm làm số lượng dòng đó
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCacNhom']
  
-    # Trích xuất Năm chuẩn xác
-    # Năm ĐẶT HÀNG: ưu tiên theo cột AA (Ngày KD gửi ĐH trên base) — đây là ngày xác định
-    # đơn hàng thuộc năm nào trên thực tế, chính xác hơn cột D (có thể ghi cũ/sai)
     df['Nam_AA'] = df['Ngay_KD_Gui_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Duyet'] = df['Ngay_Duyet_DH_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_Dat_Hang'] = df['Nam_AA'].fillna(df['Nam_Col_D']).fillna(df['Nam_Duyet']).fillna(df['Nam_Chot']).fillna('Khác')
  
-    # Năm NHẬP KHO: theo cột AH (ngày thực tế nhập kho) — vì đặt hàng năm trước nhưng
-    # nhập kho sang năm sau thì phải tính sản lượng nhập kho vào đúng năm nhập kho thực tế
     df['Nam_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
  
-    # Làm sạch văn bản
     df['Nhom_SP_Clean'] = df['Nhom_SP'].fillna('').astype(str).str.strip()
     df['Quy_Cach_Clean'] = df['Quy_Cach'].fillna('').astype(str).str.strip()
     df['Bo_Phan_KD'] = df['Bo_Phan_KD'].fillna('').astype(str).str.strip()
  
-    # PHÁT HIỆN NHẬP NHẦM CỘT: dòng có số lượng ở 1 cột nhóm (VD cột TẤM VCO) nhưng
-    # cột M (TÊN NHÓM SẢN PHẨM) lại ghi tên một nhóm KHÁC — dấu hiệu gõ nhầm số vào sai cột
-    # (từng gặp: ĐH 47 - "Tấm bịt đầu cột PL4" ghi nhóm SP KHÁC nhưng số lại nằm ở cột TẤM VCO)
     nhom_sp_upper = df['Nhom_SP_Clean'].str.upper()
     canh_bao_list = []
     for cot_ten, cot_qty, tu_khoa in [
@@ -247,23 +222,18 @@ def load_data():
             tmp['Cột số lượng bị nhầm'] = cot_ten
             tmp = tmp.rename(columns={cot_qty: 'Số lượng'})
             canh_bao_list.append(tmp)
-    df_canh_bao = pd.concat(canh_bao_list, ignore_index=True) if canh_bao_list else pd.DataFrame()
+df_canh_bao = pd.concat(canh_bao_list, ignore_index=True) if canh_bao_list else pd.DataFrame()
  
-    # Định dạng Ngày hiển thị
     df['Ngay_Duyet_DH'] = df['Ngay_Duyet_DH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_YCGH'] = df['Ngay_YCGH_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Chot_Cuoi'] = df['Ngay_Chot_Cuoi_DT'].dt.strftime('%d/%m/%Y').fillna('-')
     df['Ngay_Nhap_Kho'] = df['Ngay_Nhap_Kho_DT'].dt.strftime('%d/%m/%Y').fillna('-')
- 
-    # Tính số lượng đã nhập kho & tồn kho
-    # Đã nhập kho = trạng thái cột C là "Done" (không chỉ dựa vào có ngày ở cột AH,
-    # vì có thể có ngày nhưng trạng thái thực tế chưa "Done" / nhập một phần)
+
     df['Trang_Thai_SX_Clean'] = df['Trang_Thai_SX'].fillna('').astype(str).str.strip()
     df['Da_Nhap_Kho'] = df['Trang_Thai_SX_Clean'].str.lower() == 'done'
     df['SL_Nhap_Kho'] = df.apply(lambda row: row['So_Luong_Tong_DH'] if row['Da_Nhap_Kho'] else 0.0, axis=1)
     df['SL_Ton_Kho'] = df['So_Luong_Tong_DH'] - df['SL_Nhap_Kho']
  
-    # Phân loại Tháng/Quý
     df['Thang_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.month.fillna(df['Ngay_Duyet_DH_DT'].dt.month)
     df['Quy_Chot'] = df['Ngay_Chot_Cuoi_DT'].dt.quarter.fillna(df['Ngay_Duyet_DH_DT'].dt.quarter)
  
@@ -272,7 +242,6 @@ def load_data():
 try:
     df, df_canh_bao = load_data()
  
-    # Hiển thị cảnh báo nếu phát hiện dòng nhập nhầm cột số lượng
     if not df_canh_bao.empty:
         with st.expander(f"⚠️ Phát hiện {len(df_canh_bao)} dòng có thể bị nhập NHẦM CỘT số lượng (bấm để xem)"):
             st.caption("Số lượng đang nằm ở 1 cột nhóm, nhưng cột 'TÊN NHÓM SẢN PHẨM' lại ghi tên nhóm khác — kiểm tra và sửa lại trên Google Sheet.")
@@ -283,7 +252,6 @@ try:
                 use_container_width=True, hide_index=True
             )
  
-    # 3. BỘ LỌC THỜI GIAN & NHÂN SỰ
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
  
     with col_f1:
@@ -307,14 +275,13 @@ try:
         bp_list = ['Tất cả bộ phận'] + sorted(raw_bps)
         bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
  
-    # Lọc dữ liệu
     df_filtered = df.copy()
     if nam_sel != 'Tất cả các năm':
         df_filtered = df_filtered[df_filtered['Nam_Dat_Hang'] == nam_sel]
  
     if ky_sel == "Theo Tháng":
         df_filtered = df_filtered[df_filtered['Thang_Chot'] == thang_sel]
-    elif ky_sel == "Theo Quý":
+elif ky_sel == "Theo Quý":
         df_filtered = df_filtered[df_filtered['Quy_Chot'] == quy_sel]
     elif ky_sel == "6 Tháng Đầu Năm":
         df_filtered = df_filtered[df_filtered['Thang_Chot'].isin([1, 2, 3, 4, 5, 6])]
@@ -324,9 +291,6 @@ try:
     if bp_sel != 'Tất cả bộ phận':
         df_filtered = df_filtered[df_filtered['Bo_Phan_KD'] == bp_sel]
  
-    # df_nhap: dùng riêng để tính "Nhập kho" — lọc theo Năm dựa trên NĂM NHẬP KHO THỰC TẾ
-    # (cột AH), không phải năm đặt hàng (cột AA/D). Vì đặt hàng năm trước nhưng nhập kho
-    # sang năm sau thì sản lượng nhập kho phải tính vào đúng năm nhập kho thực tế đó.
     df_nhap = df.copy()
     if nam_sel != 'Tất cả các năm':
         df_nhap = df_nhap[df_nhap['Nam_Nhap_Kho'] == nam_sel]
@@ -335,12 +299,9 @@ try:
  
     st.markdown("---")
  
-    # 4. DANH SÁCH THẺ TAB CHÍNH
     nhom_sp_list = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Hệ Cột + Phụ Kiện', '📋 Nhóm Khác']
     tabs = st.tabs(nhom_sp_list)
  
-    # Mỗi nhóm sản phẩm có cột số lượng riêng trên sheet (O, P, X, Y...) — dùng thẳng
-    # cột đó để lọc & tính tổng, thay vì dò chữ trong cột Nhóm SP (cột M) dễ khớp nhầm.
     tab_qty_col = {
         '📦 Gối Chậu': 'SL_GoiChau',
         '⚙️ Khe Răng Lược': 'SL_KheRangLuoc',
@@ -358,14 +319,10 @@ try:
                 total_ton_kho = total_so_luong - total_nhap_kho
             else:
                 qty_col = tab_qty_col[tab_name]
-                # Dòng thuộc nhóm này khi cột số lượng riêng của nhóm > 0
                 df_tab = df_filtered[df_filtered[qty_col] > 0]
                 df_tab_nhap = df_nhap[df_nhap[qty_col] > 0]
  
-                # 5. HIỂN THỊ METRIC TỔNG SỐ LƯỢNG
-                # Đặt hàng: lọc theo Năm dựa trên cột AA (Ngày KD gửi ĐH)
                 total_so_luong = df_tab[qty_col].sum()
-                # Nhập kho: lọc theo Năm dựa trên cột AH (ngày nhập kho thực tế) + trạng thái Done
                 total_nhap_kho = df_tab_nhap.loc[df_tab_nhap['Da_Nhap_Kho'], qty_col].sum()
                 total_ton_kho = total_so_luong - total_nhap_kho
  
@@ -375,10 +332,8 @@ try:
             m3.metric("✅ Tổng SL Nhập Kho", f"{total_nhap_kho:,.0f}")
             m4.metric("⏳ SL Tồn Cần Sản Xuất", f"{total_ton_kho:,.0f}")
  
- 
             st.markdown("<br>", unsafe_allow_html=True)
  
-            # 6. Ô TÌM KIẾM
             search_kw = st.text_input(f"🔍 Tìm kiếm trong tab [{tab_name}]:", key=f"search_{i}")
             if search_kw:
                 df_tab = df_tab[
@@ -387,9 +342,8 @@ try:
                     df_tab['Quy_Cach'].astype(str).str.contains(search_kw, case=False, na=False)
                 ]
  
-            # 7. BẢNG HIỂN THỊ CHI TIẾT
             cols_show = [
-                'So_DH', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong_Tong_DH', 'DVT',
+'So_DH', 'Nhom_SP', 'Trang_Thai_SX', 'Du_An', 'Quy_Cach', 'So_Luong_Tong_DH', 'DVT',
                 'SL_Nhap_Kho', 'SL_Ton_Kho', 'Ngay_Duyet_DH', 'Ngay_YCGH', 'Ngay_Chot_Cuoi', 'Ngay_Nhap_Kho'
             ]
  
@@ -416,4 +370,3 @@ try:
  
 except Exception as e:
     st.error(f"Lỗi tải hoặc xử lý dữ liệu: {e}")
- 
