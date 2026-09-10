@@ -8,10 +8,9 @@ st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng",
 
 st.markdown("""
     <style>
-    /* Nền tổng thể và khoảng cách */
     .main { padding: 1rem; }
     
-    /* TIÊU ĐỀ CHÍNH NỔI BẬT - MÀU XANH IN ĐẬM */
+    /* TIÊU ĐỀ CHÍNH MÀU XANH IN ĐẬM */
     .main-title {
         color: #0d47a1;
         font-size: 32px;
@@ -28,7 +27,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
     
-    /* THẺ METRIC THỐNG KÊ MÀU XANH BẮT MẮT */
+    /* THẺ METRIC THỐNG KÊ MÀU XANH NỔI BẬT */
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
         padding: 12px 16px;
@@ -46,7 +45,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* ĐỊNH DẠNG CÁC TAB NỔI BẬT */
+    /* ĐỊNH DẠNG TAB HỆ THỐNG */
     div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
         border-radius: 20px !important;
@@ -64,7 +63,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# TIÊU ĐỀ NỔI BẬT
+# TIÊU ĐỀ
 col_title, col_btn = st.columns([3, 1])
 with col_title:
     st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
@@ -109,16 +108,12 @@ def clean_status(val):
         return 'Chưa SX'
     return val_str
 
-# HÀM PHÂN LOẠI CẢNH BÁO TIẾN ĐỘ SẢN XUẤT
+# HÀM CẢNH BÁO TIẾN ĐỘ
 def tinh_canh_bao_tien_do(row):
     if row['Da_Nhap_Kho']:
         return "✅ Đã Hoàn Thành"
-    
-    # Kiểm tra Ngày AB (Cột AB - Duyệt SX)
     if pd.isna(row['Ngay_Duyet_AB']):
         return "⚪ Chưa Duyệt SX (AB trống)"
-    
-    # Kiểm tra Ngày AG (Cột AG - Cam kết giao)
     if pd.isna(row['Ngay_Chot_AG']):
         return "⚠️ Thiếu Ngày Chốt AG"
     
@@ -136,7 +131,6 @@ def tinh_canh_bao_tien_do(row):
     else:
         return "🔵 Rất An Toàn (> 30 Ngày)"
 
-# TÔ MÀU CHO TỪNG DÒNG TRONG BẢNG DỮ LIỆU
 def style_canh_bao(val):
     if '🔴' in str(val):
         return 'background-color: #ffc9c9; color: #900C3F; font-weight: bold;'
@@ -150,13 +144,20 @@ def style_canh_bao(val):
         return 'background-color: #e9ecef; color: #6c757d;'
     return ''
 
-# HÀM XUẤT FILE EXCEL
+# HÀM HỖ TRỢ HIỂN THỊ STYLE TƯƠNG THÍCH MỌI PHIÊN BẢN PANDAS
+def apply_style_safe(styler, func, subset):
+    if hasattr(styler, 'map'):
+        return styler.map(func, subset=subset)
+    else:
+        return styler.applymap(func, subset=subset)
+
+# HÀM XUẤT FILE EXCEL CHO 3 SHEET
 def convert_df_to_excel(df_moi, df_ton, df_done, cols, col_qty, label_ky):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_moi[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}")
-        df_ton[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}")
-        df_done[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}")
+        df_moi[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}"[:30])
+        df_ton[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}"[:30])
+        df_done[cols + [col_qty]].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}"[:30])
     return output.getvalue()
 
 @st.cache_data(ttl=5)
@@ -165,17 +166,16 @@ def load_data():
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
 
     df = pd.DataFrame()
-    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()          # Col B
-    df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].apply(clean_status)       # Col C
-    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026').astype(str).str.strip() # Col D
-    df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].astype(str).str.strip().fillna('Chưa phân loại')  # Col E
-    df['NV_KD'] = df_raw.iloc[3:, 6].astype(str).str.strip().fillna('Chưa phân loại')      # Col G
-    df['Du_An'] = df_raw.iloc[3:, 7].fillna('')                         # Col H
-    df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')                      # Col J
-    df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')                        # Col K
-    df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]                    # Col N
+    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()
+    df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].apply(clean_status)
+    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026').astype(str).str.strip()
+    df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].astype(str).str.strip().fillna('Chưa phân loại')
+    df['NV_KD'] = df_raw.iloc[3:, 6].astype(str).str.strip().fillna('Chưa phân loại')
+    df['Du_An'] = df_raw.iloc[3:, 7].fillna('')
+    df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')
+    df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')
+    df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]
 
-    # SẢN PHẨM CHÍNH & PHỤ
     df['SL_KheRangLuoc'] = df_raw.iloc[3:, 14].apply(clean_number)
     df['SL_GoiChau'] = df_raw.iloc[3:, 15].apply(clean_number)
     df['SL_TamVCO'] = df_raw.iloc[3:, 23].apply(clean_number)
@@ -190,14 +190,12 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)
 
-    # ĐỌC MỐC THỜI GIAN THEO CÁC CỘT MỚI (AB, AC, AG)
-    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   # Col AA
-    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')  # Col AB - Duyệt hoàn toàn
-    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce') # Col AC - Ngày KD cần
-    df['Ngay_Chot_AG'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')   # Col AG - Chốt với KD
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH - Nhập kho
+    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')
+    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')
+    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce')
+    df['Ngay_Chot_AG'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')
+    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce')
 
-    # LỌC DÒNG RỐNG
     df = df[df['So_DH'].notna()]
     df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
 
@@ -223,7 +221,6 @@ def load_data():
     df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter.fillna(0).astype(int)
     df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year.fillna(2026).astype(int)
 
-    # TÍNH CẢNH BÁO
     df['Canh_Bao_Tien_Do'] = df.apply(tinh_canh_bao_tien_do, axis=1)
 
     return df
@@ -246,7 +243,7 @@ try:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8) # Mặc định Tháng 9
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8)
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
             quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=0)
@@ -268,7 +265,7 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. TÁCH DỮ LIỆU CẢNH BÁO
+    # 4. TÁCH DỮ LIỆU
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -309,7 +306,7 @@ try:
 
     st.markdown("---")
 
-    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM
+    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM & NÚT XUẤT EXCEL
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
@@ -352,7 +349,6 @@ try:
 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # TÌM KIẾM VÀ NÚT XUẤT EXCEL
             col_search, col_export = st.columns([3, 1])
             with col_search:
                 search_kw = st.text_input(f"🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
@@ -376,7 +372,6 @@ try:
                     key=f"btn_ex_{i}"
                 )
 
-            # BẢNG HIỂN THỊ DỮ LIỆU CÓ TÔ MÀU CẢNH BÁO
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                 f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
                 f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
@@ -395,13 +390,13 @@ try:
             }
 
             with sub_tab1:
-                st.dataframe(sub_moi[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_moi[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab2:
-                st.dataframe(sub_ton[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_ton[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
             with sub_tab3:
-                st.dataframe(sub_done[cols_display + [q_col]].style.applymap(style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                st.dataframe(apply_style_safe(sub_done[cols_display + [q_col]].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
 
 except Exception as e:
     st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
