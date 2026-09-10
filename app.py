@@ -67,7 +67,7 @@ def load_data():
 
     # Khởi tạo DataFrame từ dữ liệu raw
     df = pd.DataFrame()
-    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()         # Col B (Index 1)
+    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()          # Col B (Index 1)
     df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].fillna('Chưa SX')          # Col C (Index 2)
     df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026')           # Col D (Index 3)
     df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].fillna('Chưa phân loại')      # Col E (Index 4)
@@ -94,10 +94,18 @@ def load_data():
     df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)        # Col W (Index 22)
     df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)          # Col Z (Index 25)
 
-    # Mốc thời gian
-    df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   # Col AB
-    df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    # Col AG
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') # Col AH
+    # ---------------------------------------------------------
+    # MỐC THỜI GIAN: ĐÃ ĐIỀU CHỈNH CHUẨN CỘT AA (INDEX 26)
+    # ---------------------------------------------------------
+    # Col AA (Index 26): Ngày BPKD gửi ĐH (Lấy chuẩn làm Ngày Đặt Hàng)
+    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')   
+    
+    # Col AB (Index 27) & Col AG (Index 32): Dùng làm dự phòng nếu cột AA trống
+    df['Ngay_Duyet_DT'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')   
+    df['Ngay_Chot_DT'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')    
+    
+    # Col AH (Index 33): Ngày thực tế nhập kho
+    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce') 
 
     # Lọc bỏ các dòng tiêu đề rác
     df = df[df['So_DH'].notna()]
@@ -113,8 +121,8 @@ def load_data():
     df['SL_TongCalculated'] = df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] + df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
     df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
 
-    # Chuẩn hóa Thời gian Đặt hàng & Nhập kho
-    df['Ngay_DatHang_DT'] = df['Ngay_Chot_DT'].fillna(df['Ngay_Duyet_DT'])
+    # Chuẩn hóa Thời gian Đặt hàng (Ưu tiên Col AA -> Col AG -> Col AB)
+    df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_DT']).fillna(df['Ngay_Duyet_DT'])
     df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.astype(str).str.replace('.0', '', regex=False)
     df['Nam_DatHang'] = df['Nam_DatHang'].replace('nan', None).fillna(df['Nam_DatHang_Raw']).fillna('2026')
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month
