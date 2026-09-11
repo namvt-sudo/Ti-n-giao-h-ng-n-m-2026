@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import io
 import re
@@ -740,8 +741,55 @@ def render_dashboard():
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
  
+# JS "canh gác" chạy nền: liên tục theo dõi toàn bộ trang, hễ Streamlit cố gắn
+# opacity mờ / thuộc tính data-stale lên bất kỳ phần tử nào trong lúc fragment
+# tự động rerun thì lập tức ép về opacity: 1 ngay lập tức. Vì đây là JS chạy
+# runtime thay vì CSS tĩnh, nên không phụ thuộc vào việc đoán đúng tên class/
+# attribute nội bộ của từng phiên bản Streamlit - luôn phản ứng theo thời gian
+# thực, gần như loại bỏ hoàn toàn cảm giác mờ/nháy.
+def _chong_nhap_nhay():
+    js_code = """
+    <script>
+    (function() {
+        function fixDoc(doc) {
+            try {
+                doc.querySelectorAll('[data-stale="true"]').forEach(function(el) {
+                    el.removeAttribute('data-stale');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('transition', 'none', 'important');
+                });
+                doc.querySelectorAll('[style*="opacity"]').forEach(function(el) {
+                    var op = el.style.opacity;
+                    if (op && parseFloat(op) < 1) {
+                        el.style.setProperty('opacity', '1', 'important');
+                    }
+                });
+            } catch (e) {}
+        }
+        function attach() {
+            try {
+                var doc = window.parent.document;
+                fixDoc(doc);
+                var observer = new MutationObserver(function() { fixDoc(doc); });
+                observer.observe(doc.body, {
+                    attributes: true,
+                    childList: true,
+                    subtree: true,
+                    attributeFilter: ['style', 'data-stale', 'class']
+                });
+            } catch (e) {}
+        }
+        attach();
+        setInterval(function() {
+            try { fixDoc(window.parent.document); } catch (e) {}
+        }, 300);
+    })();
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+ 
+_chong_nhap_nhay()
+ 
 # CHẠY HÀM DASHBOARD
 render_dashboard()
  
-
-
