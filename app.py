@@ -223,12 +223,9 @@ def load_data():
         pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')
     ).fillna(2026).astype(int)
     df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
-    df['Quy_DatHang'] = df['Ngay_DatHang_DT'].dt.quarter.fillna(1).astype(int)
 
     df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_DT'].notna())
-    df['Thang_NhapKho'] = df['Ngay_NhapKho_DT'].dt.month.fillna(0).astype(int)
-    df['Quy_NhapKho'] = df['Ngay_NhapKho_DT'].dt.quarter.fillna(0).astype(int)
-    df['Nam_NhapKho'] = df['Ngay_NhapKho_DT'].dt.year.fillna(2026).astype(int)
+    df['Ngay_NK_Check'] = df['Ngay_NhapKho_DT']
 
     df['Canh_Bao_Tien_Do'] = df.apply(tinh_canh_bao_tien_do, axis=1)
 
@@ -243,19 +240,19 @@ try:
 
     with f1:
         nam_list = ['Tất cả các năm'] + sorted(list(df['Nam_DatHang'].unique()))
-        nam_sel = st.selectbox("📅 Chọn Năm", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0)
+        nam_sel = st.selectbox("📅 Chọn Năm Báo Cáo", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0)
 
     with f2:
-        ky_sel = st.selectbox("⏱️ Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm", "6 Tháng Đầu Năm", "6 Tháng Cuối Năm"])
+        ky_sel = st.selectbox("⏱️ Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm"])
 
     with f3:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=8)
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=7) # Default Tháng 8
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
-            quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=0)
+            quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=2)
             quy_sel = int(quy_chon_str.replace("Quý ", ""))
         else:
             st.selectbox("🗓️ Chi Tiết Kỳ", ["Tất cả (Cả năm)"], disabled=True)
@@ -274,7 +271,7 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. TÁCH DỮ LIỆU
+    # 4. LỌC DỮ LIỆU CƠ BẢN
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -282,32 +279,40 @@ try:
     if nv_sel != 'Tất cả NVKD':
         df_base = df_base[df_base['NV_KD'] == nv_sel]
 
-    cond_nam_dat = (df_base['Nam_DatHang'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
-    cond_nam_nk = (df_base['Nam_NhapKho'] == nam_sel) if nam_sel != 'Tất cả các năm' else True
-
+    # XÁC ĐỊNH MỐC THỜI GIAN BẮT ĐẦU VÀ KẾT THÚC CỦA KỲ BÁO CÁO
+    nam_eff = 2026 if nam_sel == 'Tất cả các năm' else int(nam_sel)
+    
     if ky_sel == "Theo Tháng" and thang_sel:
-        cond_ky_moi = (df_base['Thang_DatHang'] == thang_sel)
-        cond_ky_truoc = (df_base['Thang_DatHang'] < thang_sel)
-        cond_ky_nk = (df_base['Thang_NhapKho'] == thang_sel)
-        ten_ky_hien_thi = f"Tháng {thang_sel}"
+        start_date = pd.Timestamp(year=nam_eff, month=thang_sel, day=1)
+        end_date = start_date + pd.offsets.MonthEnd(1)
+        ten_ky_hien_thi = f"Tháng {thang_sel}/{nam_eff}"
     elif ky_sel == "Theo Quý" and quy_sel:
-        map_quy_thang = {1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]}
-        list_thang = map_quy_thang[quy_sel]
-        cond_ky_moi = df_base['Thang_DatHang'].isin(list_thang)
-        cond_ky_truoc = df_base['Thang_DatHang'] < list_thang[0]
-        cond_ky_nk = df_base['Quy_NhapKho'] == quy_sel
-        ten_ky_hien_thi = f"Quý {quy_sel}"
+        start_month = (quy_sel - 1) * 3 + 1
+        start_date = pd.Timestamp(year=nam_eff, month=start_month, day=1)
+        end_date = start_date + pd.DateOffset(months=3) - pd.Timedelta(days=1)
+        ten_ky_hien_thi = f"Quý {quy_sel}/{nam_eff}"
     else:
-        cond_ky_moi = True
-        cond_ky_truoc = False
-        cond_ky_nk = True
-        ten_ky_hien_thi = "Cả Năm"
+        start_date = pd.Timestamp(year=nam_eff, month=1, day=1)
+        end_date = pd.Timestamp(year=nam_eff, month=12, day=31)
+        ten_ky_hien_thi = f"Năm {nam_eff}"
 
-    df_moi = df_base[cond_nam_dat & cond_ky_moi].copy()
-    cond_chua_done = (~df_base['Da_Nhap_Kho']) & (~df_base['Trang_Thai_SX'].str.lower().isin(['tạm dừng sx', 'tam dung sx']))
-    df_ton = df_base[cond_nam_dat & cond_ky_truoc & cond_chua_done].copy()
-    df_done = df_base[cond_nam_nk & cond_ky_nk & df_base['Da_Nhap_Kho']].copy()
+    # --- LOGIC TÁCH DỮ LIỆU CHUẨN KẾ TOÁN VÀ SẢN XUẤT ---
+    
+    # 1. ĐẶT MỚI TRONG KỲ: Ngày đặt hàng nằm đúng trong kỳ báo cáo
+    cond_dat_moi = (df_base['Ngay_DatHang_DT'] >= start_date) & (df_base['Ngay_DatHang_DT'] <= end_date)
+    df_moi = df_base[cond_dat_moi].copy()
 
+    # 2. TỒN TỪ QUÁ KHỨ CHUYỂN SANG: 
+    # Đặt hàng TRƯỚC ngày bắt đầu kỳ VÀ (Chưa từng nhập kho HOẶC Nhập kho TỪ ngày bắt đầu kỳ trở đi)
+    cond_dat_truoc = (df_base['Ngay_DatHang_DT'] < start_date)
+    cond_chua_nk_truoc_ky = (~df_base['Da_Nhap_Kho']) | (df_base['Ngay_NK_Check'] >= start_date)
+    df_ton = df_base[cond_dat_truoc & cond_chua_nk_truoc_ky].copy()
+
+    # 3. ĐÃ NHẬP KHO TRONG KỲ: Ngày nhập kho thực tế nằm trong kỳ báo cáo
+    cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
+    df_done = df_base[cond_nhap_kho_trong_ky].copy()
+
+    # Lọc theo tình trạng sản xuất nếu có chọn
     if tt_sel != 'Tất cả tình trạng':
         df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
         df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
@@ -351,7 +356,7 @@ try:
 
             m1, m2, m3, m4, m5 = st.columns(5)
             m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
-            m2.metric(f"⏳ Tồn Trước {ten_ky_hien_thi}", f"{sl_ton_chuyen_sang:,.2f}")
+            m2.metric(f"⏳ Tồn Lũy Kế Chuyển Sang", f"{sl_ton_chuyen_sang:,.2f}")
             m3.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
             m4.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
             m5.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
@@ -375,16 +380,16 @@ try:
                 st.download_button(
                     label=f"📥 Trích Excel ({tab_clean})",
                     data=excel_data,
-                    file_name=f"Bao_Cao_{tab_clean}_{ten_ky_hien_thi}_{nam_sel}.xlsx",
+                    file_name=f"Bao_Cao_{tab_clean}_{ten_ky_hien_thi}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True,
                     key=f"btn_ex_{i}"
                 )
 
             sub_tab1, sub_tab2, sub_tab3 = st.tabs([
-                f"🆕 Đơn Đặt Mới {ten_ky_hien_thi} ({len(sub_moi)} dòng)", 
-                f"⌛ Đơn Tồn Trước {ten_ky_hien_thi} Chuyển Sang ({len(sub_ton)} dòng)",
-                f"✅ Đơn Đã Nhập Kho Trong {ten_ky_hien_thi} ({len(sub_done)} dòng)"
+                f"🆕 Đơn Đặt Mới ({len(sub_moi)} dòng)", 
+                f"⌛ Đơn Tồn Quá Khứ Chuyển Sang ({len(sub_ton)} dòng)",
+                f"✅ Đơn Đã Nhập Kho Trong Kỳ ({len(sub_done)} dòng)"
             ])
 
             column_cfg = {
