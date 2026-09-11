@@ -16,7 +16,7 @@ st.markdown("""
         font-size: 32px;
         font-weight: 800;
         text-transform: uppercase;
-        margin-bottom: 5px;
+        margin-bottom: 15px;
         letter-spacing: 0.5px;
     }
     .sub-title {
@@ -228,7 +228,6 @@ def render_dashboard():
     
     st.markdown(f'<div style="font-size: 15px; color: #1e88e5; font-weight: 700; margin-bottom: 3px;">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
-    st.caption("⚡ Dữ liệu tự động đồng bộ ngầm mỗi 10 giây (không nhấp nháy làm mờ trang web).")
 
     try:
         df = load_data()
