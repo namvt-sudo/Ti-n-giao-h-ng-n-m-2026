@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import re
 from datetime import datetime
 
 # 1. CẤU HÌNH TRANG WEB & TẠO CSS MÀU XANH NỔI BẬT + HEADER BẢNG IN ĐẬM
@@ -160,13 +161,20 @@ def apply_style_safe(styler, func, subset):
     else:
         return styler.applymap(func, subset=subset)
 
-# HÀM XUẤT FILE EXCEL CHO 3 SHEET
+# HÀM XUẤT FILE EXCEL ĐÃ SỬA LỖI TÊN SHEET HỢP LỆ EXCEL
 def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
     output = io.BytesIO()
+    # Làm sạch ký tự cấm trong tên Sheet: / \ ? * : [ ]
+    clean_label = re.sub(r'[\/\\\?\*\:\[\]]', '-', str(label_ky))
+    
+    sheet_moi = f"Đặt Mới {clean_label}"[:31]
+    sheet_ton = f"Tồn Trước {clean_label}"[:31]
+    sheet_done = f"Đã Nhập Kho {clean_label}"[:31]
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_moi[cols].to_excel(writer, index=False, sheet_name=f"Đặt Mới {label_ky}"[:30])
-        df_ton[cols].to_excel(writer, index=False, sheet_name=f"Tồn Trước {label_ky}"[:30])
-        df_done[cols].to_excel(writer, index=False, sheet_name=f"Đã Nhập Kho {label_ky}"[:30])
+        df_moi[cols].to_excel(writer, index=False, sheet_name=sheet_moi)
+        df_ton[cols].to_excel(writer, index=False, sheet_name=sheet_ton)
+        df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
     return output.getvalue()
 
 @st.cache_data(ttl=5)
@@ -380,7 +388,7 @@ try:
                 st.download_button(
                     label=f"📥 Trích Excel ({tab_clean})",
                     data=excel_data,
-                    file_name=f"Bao_Cao_{tab_clean}_{ten_ky_hien_thi}.xlsx",
+                    file_name=f"Bao_Cao_{tab_clean}_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True,
                     key=f"btn_ex_{i}"
