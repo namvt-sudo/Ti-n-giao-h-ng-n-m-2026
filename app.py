@@ -669,7 +669,7 @@ def render_dashboard():
                 if ky_sel == "Theo Tháng":
                     st.markdown('<div class="filter-chip-label">🗓️ Chọn Tháng</div>', unsafe_allow_html=True)
                     danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-                    thang_chon_str = st.selectbox("Chọn Tháng", danh_sach_thang, index=7, label_visibility="collapsed")
+                    thang_chon_str = st.selectbox("Chọn Tháng", danh_sach_thang, index=datetime.now().month - 1, label_visibility="collapsed")
                     thang_sel = int(thang_chon_str.replace("Tháng ", ""))
                 elif ky_sel == "Theo Quý":
                     st.markdown('<div class="filter-chip-label">📊 Chọn Quý</div>', unsafe_allow_html=True)
@@ -738,7 +738,7 @@ def render_dashboard():
         st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
         # TAB DANH MỤC
-        tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
+        tab_names = ['🗓️ Kế Hoạch Sản Xuất', '📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
  
         qty_mapping = {
@@ -751,6 +751,62 @@ def render_dashboard():
  
         for i, tname in enumerate(tab_names):
             with tabs[i]:
+                if tname == '🗓️ Kế Hoạch Sản Xuất':
+                    # Kế hoạch sản xuất: gộp TẤT CẢ loại sản phẩm (không tách Khe/Gối Chậu...),
+                    # lấy theo Ngày Chốt Tiến Độ Giao Hàng VHIP-KD rơi vào kỳ đang chọn,
+                    # chỉ hiện đơn CHƯA nhập kho (còn cần sản xuất).
+                    q_col = 'So_Luong_Tong_DH'
+                    df_khsx = df_base[
+                        (df_base['Ngay_Chot_AG'] >= start_date) &
+                        (df_base['Ngay_Chot_AG'] <= end_date) &
+                        (~df_base['Da_Nhap_Kho'])
+                    ].copy()
+                    if tt_sel != 'Tất cả tình trạng':
+                        df_khsx = df_khsx[df_khsx['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+ 
+                    cols_display = [
+                        'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
+                        'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC',
+                        'Ngay_Chot_AG', 'Ngay_NhapKho_DT'
+                    ]
+ 
+                    sl_can_sx = df_khsx[q_col].sum()
+                    so_don = len(df_khsx)
+ 
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    m1, m2 = st.columns(2)
+                    m1.metric(f"🗓️ Tổng SL Cần SX (Chốt giao trong {ten_ky_hien_thi})", f"{sl_can_sx:,.2f}")
+                    m2.metric("📋 Số Đơn Hàng", f"{so_don:,}")
+ 
+                    st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
+ 
+                    col_search, col_export = st.columns([3, 1])
+                    with col_search:
+                        search_kw = st.text_input("🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
+                    if search_kw:
+                        df_khsx = df_khsx[df_khsx['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+ 
+                    with col_export:
+                        st.write("")
+                        st.write("")
+                        excel_buf = io.BytesIO()
+                        sheet_name = re.sub(r'[\/\\\?\*\:\[\]]', '-', f"KeHoachSX {ten_ky_hien_thi}")[:31]
+                        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+                            df_khsx[cols_display].to_excel(writer, index=False, sheet_name=sheet_name)
+                        st.download_button(
+                            label="📥 Trích Excel (Kế Hoạch SX)",
+                            data=excel_buf.getvalue(),
+                            file_name=f"Ke_Hoach_San_Xuat_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key=f"btn_ex_{i}"
+                        )
+ 
+                    st.caption(f"📄 {len(df_khsx)} dòng")
+                    render_pretty_table(df_khsx, cols_display, q_col, f"khsx_{i}")
+ 
+                    continue
+ 
                 if tname == '📊 Dashboard Tổng':
                     q_col = 'So_Luong_Tong_DH'
                     sub_moi, sub_ton, sub_done = df_moi.copy(), df_ton.copy(), df_done.copy()
