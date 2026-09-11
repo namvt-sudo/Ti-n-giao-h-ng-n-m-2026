@@ -28,24 +28,15 @@ st.set_page_config(
     page_icon=_get_logo_image(LOGO_B64_192)
 )
  
-# Gắn icon riêng cho iPhone/Safari (apple-touch-icon) và icon độ phân giải cao
-# cho Android khi người dùng bấm "Thêm vào Màn hình chính".
-# QUAN TRỌNG: Streamlit tự động kèm sẵn 1 file "manifest" riêng có thể chứa
-# icon mặc định của chính Streamlit, khiến iOS ưu tiên đọc icon đó thay vì
-# icon mình gắn thêm. Đoạn JS này sẽ: (1) gỡ bỏ link "manifest" và
-# "apple-touch-icon" mặc định (nếu có), (2) tự tạo 1 "manifest" mới trỏ về
-# đúng logo Vĩnh Hưng, (3) gắn lại apple-touch-icon cho chắc chắn.
+# Gắn icon riêng cho iPhone/Safari (apple-touch-icon) khi người dùng bấm
+# "Thêm vào Màn hình chính". Không động vào "manifest" hay "icon" mặc định
+# của Streamlit nữa (thử nghiệm trước đó làm hỏng luôn icon tab đang chạy tốt) -
+# chỉ thêm riêng apple-touch-icon, không xoá gì của Streamlit.
 _head_icon_js = f"""
 <script>
 (function() {{
     try {{
         var doc = window.parent.document;
- 
-        // 1. Gỡ bỏ manifest & apple-touch-icon mặc định của Streamlit (nếu có)
-        doc.querySelectorAll('link[rel="manifest"]').forEach(function(el) {{ el.remove(); }});
-        doc.querySelectorAll('link[rel="apple-touch-icon"]').forEach(function(el) {{ el.remove(); }});
-        doc.querySelectorAll('link[rel="apple-touch-icon-precomposed"]').forEach(function(el) {{ el.remove(); }});
- 
         function themLink(rel, sizes, type, href) {{
             var link = doc.createElement('link');
             link.rel = rel;
@@ -54,26 +45,8 @@ _head_icon_js = f"""
             link.href = href;
             doc.head.appendChild(link);
         }}
- 
-        // 2. Tạo manifest mới của riêng VHIP, trỏ đúng logo Vĩnh Hưng
-        var manifest = {{
-            name: "VHIP Dashboard",
-            short_name: "VHIP",
-            icons: [
-                {{ src: "data:image/png;base64,{LOGO_B64_192}", sizes: "192x192", type: "image/png" }},
-                {{ src: "data:image/png;base64,{LOGO_B64_512}", sizes: "512x512", type: "image/png" }}
-            ],
-            start_url: ".",
-            display: "standalone"
-        }};
-        var manifestB64 = btoa(unescape(encodeURIComponent(JSON.stringify(manifest))));
-        themLink('manifest', null, 'application/manifest+json', 'data:application/manifest+json;base64,' + manifestB64);
- 
-        // 3. Gắn lại apple-touch-icon và icon độ phân giải cao
         themLink('apple-touch-icon', '192x192', null, 'data:image/png;base64,{LOGO_B64_192}');
         themLink('apple-touch-icon', '512x512', null, 'data:image/png;base64,{LOGO_B64_512}');
-        themLink('icon', '192x192', 'image/png', 'data:image/png;base64,{LOGO_B64_192}');
-        themLink('icon', '512x512', 'image/png', 'data:image/png;base64,{LOGO_B64_512}');
     }} catch (e) {{}}
 }})();
 </script>
