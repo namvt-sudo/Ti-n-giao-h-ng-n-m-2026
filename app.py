@@ -4,29 +4,69 @@ import io
 import re
 from datetime import datetime
 
-# 1. CẤU HÌNH TRANG WEB
+# 1. CẤU HÌNH TRANG WEB & GIAO DIỆN SANG TRỌNG
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
+    /* Bố cục chung */
     .main { padding: 1rem; }
     
     .main-title {
         color: #0d47a1;
-        font-size: 32px;
+        font-size: 30px;
         font-weight: 800;
         text-transform: uppercase;
         margin-bottom: 15px;
         letter-spacing: 0.5px;
     }
-    .sub-title {
-        color: #1565c0;
-        font-size: 22px;
-        font-weight: 700;
-        margin-top: 15px;
-        margin-bottom: 15px;
+
+    /* KHOANH VÙNG BỘ LỌC (CARD CONTAINER) */
+    .filter-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        padding: 20px 24px 10px 24px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        border-left: 6px solid #1976d2;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        margin-bottom: 25px;
     }
-    
+
+    /* Tiêu đề Bộ Lọc */
+    .filter-header {
+        color: #0d47a1;
+        font-size: 18px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* NHÃN CÁC Ô CHỌN (KỂ CẢ "CHỌN THÁNG") - NỔI BẬT & RÕ NÉT */
+    div[data-testid="stWidgetLabel"] p {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 14.5px !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* ĐỊNH DẠNG Ô SELECTBOX TRỰC QUAN */
+    div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        transition: all 0.2s ease-in-out;
+    }
+    div[data-baseweb="select"]:hover > div {
+        border-color: #1976d2 !important;
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1) !important;
+    }
+
+    /* METRIC CARDS */
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
         padding: 12px 16px;
@@ -44,6 +84,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
+    /* TAB CHUYỂN TRANG */
     div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
         border-radius: 20px !important;
@@ -59,6 +100,7 @@ st.markdown("""
         box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4) !important;
     }
 
+    /* BẢNG DỮ LIỆU */
     div[data-testid="stDataFrame"] th {
         background-color: #0d47a1 !important;
         color: #ffffff !important;
@@ -220,20 +262,21 @@ def load_data():
     return df
 
 
-# 3. TỰ ĐỘNG LÀM MỚI NGẦM MỖI 10 GIÂY KHÔNG GÂY NHẤP NHÁY TRANG
+# 3. DASHBOARD MAIN RENDER
 @st.fragment(run_every=10)
 def render_dashboard():
-    # Cập nhật thời gian
     thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
-    st.markdown(f'<div style="font-size: 15px; color: #1e88e5; font-weight: 700; margin-bottom: 3px;">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size: 14px; color: #1e88e5; font-weight: 700; margin-bottom: 2px;">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
 
     try:
         df = load_data()
 
-        # BỘ LỌC TÌM KIẾM
-        st.markdown('<div class="sub-title">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>', unsafe_allow_html=True)
+        # BỘ LỌC ĐƯỢC BỌC TRONG KHUNG CARD THẨM MỸ HIGH-END
+        st.markdown('<div class="filter-card">', unsafe_allow_html=True)
+        st.markdown('<div class="filter-header">🎯 BỘ LỌC TIẾN ĐỘ SẢN XUẤT & SẢN LƯỢNG</div>', unsafe_allow_html=True)
+
         f1, f2, f3, f4, f5 = st.columns(5)
 
         with f1:
@@ -268,6 +311,8 @@ def render_dashboard():
             df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
             nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
             nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
+
+        st.markdown('</div>', unsafe_allow_html=True) # Đóng div filter-card
 
         df_base = df.copy()
 
@@ -309,8 +354,6 @@ def render_dashboard():
             df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
             df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
             df_done = df_done[df_done['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-
-        st.markdown("---")
 
         tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
