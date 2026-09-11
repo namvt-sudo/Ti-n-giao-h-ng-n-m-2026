@@ -201,6 +201,20 @@ st.markdown("""
         display: none !important;
     }
  
+    /* Ẩn huy hiệu "NEW" + vạch đỏ nhấp nháy mà Streamlit tự hiện trên tab khi
+       nội dung/label của tab thay đổi giữa các lần fragment tự động rerun.
+       (Phòng hờ - fix gốc là giữ nhãn tab cố định, không nhúng số liệu động vào label) */
+    div[data-testid="stTabs"] [role="tab"] [data-testid*="New"],
+    div[data-testid="stTabs"] [role="tab"] [class*="New"],
+    div[data-testid="stTabs"] [role="tab"] [aria-label*="new" i],
+    div[data-testid="stTabs"] [role="tab"] span[title*="new" i] {
+        display: none !important;
+    }
+    div[data-testid="stTabs"] [role="tab"] {
+        transition: none !important;
+        animation: none !important;
+    }
+ 
     /* Tab con (Đơn Đặt Mới / Tồn / Đã Nhập Kho) - kiểu pill nhỏ nhẹ nhàng */
     div[data-testid="stTabs"] div[data-testid="stTabs"] [role="tab"] {
         border-radius: 20px !important;
@@ -684,19 +698,26 @@ def render_dashboard():
                         key=f"btn_ex_{i}"
                     )
  
+                # Lưu ý: nhãn tab để CỐ ĐỊNH (không nhúng số dòng động vào đây),
+                # vì nếu nhãn tab đổi text mỗi lần fragment tự rerun, Streamlit sẽ
+                # tự động hiện huy hiệu "NEW" + vạch đỏ nhấp nháy trên tab đó.
+                # Số dòng được hiển thị riêng bằng st.caption() bên trong từng tab.
                 sub_tab1, sub_tab2, sub_tab3 = st.tabs([
-                    f"🆕 Đơn Đặt Mới ({len(sub_moi)} dòng)",
-                    f"⌛ Đơn Tồn Quá Khứ Chuyển Sang ({len(sub_ton)} dòng)",
-                    f"✅ Đơn Đã Nhập Kho Trong Kỳ ({len(sub_done)} dòng)"
+                    "🆕 Đơn Đặt Mới",
+                    "⌛ Đơn Tồn Quá Khứ Chuyển Sang",
+                    "✅ Đơn Đã Nhập Kho Trong Kỳ"
                 ])
  
                 with sub_tab1:
+                    st.caption(f"📄 {len(sub_moi)} dòng")
                     render_pretty_table(sub_moi, cols_display, q_col, f"moi_{i}")
  
                 with sub_tab2:
+                    st.caption(f"📄 {len(sub_ton)} dòng")
                     render_pretty_table(sub_ton, cols_display, q_col, f"ton_{i}")
  
                 with sub_tab3:
+                    st.caption(f"📄 {len(sub_done)} dòng")
                     render_pretty_table(sub_done, cols_display, q_col, f"done_{i}")
  
     except Exception as e:
