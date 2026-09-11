@@ -3,15 +3,18 @@ import pandas as pd
 import io
 import re
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
-# 1. CẤU HÌNH TRANG WEB & TẠO CSS MÀU XANH NỔI BẬT + HEADER BẢNG IN ĐẬM
+# 1. CẤU HÌNH TRANG WEB & TỰ ĐỘNG REFRESH MỖI 10 GIÂY
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
+
+# TỰ ĐỘNG LÀM MỚI TỪ GOOGLE SHEET SAU MỖI 10 GIÂY (10000 ms)
+st_autorefresh(interval=10000, key="vhip_auto_refresh")
 
 st.markdown("""
     <style>
     .main { padding: 1rem; }
     
-    /* TIÊU ĐỀ CHÍNH MÀU XANH IN ĐẬM */
     .main-title {
         color: #0d47a1;
         font-size: 32px;
@@ -28,7 +31,6 @@ st.markdown("""
         margin-bottom: 15px;
     }
     
-    /* THẺ METRIC THỐNG KÊ MÀU XANH NỔI BẬT */
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
         padding: 12px 16px;
@@ -46,7 +48,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* ĐỊNH DẠNG TAB HỆ THỐNG */
     div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
         border-radius: 20px !important;
@@ -62,7 +63,6 @@ st.markdown("""
         box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4) !important;
     }
 
-    /* ĐỊNH DẠNG HEADER TIÊU ĐỀ BẢNG DỮ LIỆU (MÀU XANH, IN ĐẬM, CHỮ TRẮNG) */
     div[data-testid="stDataFrame"] th {
         background-color: #0d47a1 !important;
         color: #ffffff !important;
@@ -73,15 +73,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# TIÊU ĐỀ
-col_title, col_btn = st.columns([3, 1])
-with col_title:
-    st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
-with col_btn:
-    st.write("")
-    if st.button("🔄 Cập nhật dữ liệu mới nhất", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+# THỜI GIAN CẬP NHẬT TỰ ĐỘNG
+thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+# TIÊU ĐỀ HỆ THỐNG
+st.markdown(f'<div style="font-size: 15px; color: #1e88e5; font-weight: 700; margin-bottom: 3px;">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
+st.caption("⚡ Hệ thống tự động cập nhật dữ liệu mới nhất từ Google Sheets theo thời gian thực (10 giây/lần).")
 
 # 2. XỬ LÝ DỮ LIỆU TỪ GOOGLE SHEETS
 GGS_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/edit?usp=sharing"
@@ -118,7 +116,6 @@ def clean_status(val):
         return 'Chưa SX'
     return val_str
 
-# HÀM CẢNH BÁO TIẾN ĐỘ
 def tinh_canh_bao_tien_do(row):
     if row['Da_Nhap_Kho']:
         return "✅ Đã Hoàn Thành"
@@ -154,19 +151,15 @@ def style_canh_bao(val):
         return 'background-color: #e9ecef; color: #6c757d;'
     return ''
 
-# HÀM HỖ TRỢ HIỂN THỊ STYLE TƯƠNG THÍCH MỌI PHIÊN BẢN PANDAS
 def apply_style_safe(styler, func, subset):
     if hasattr(styler, 'map'):
         return styler.map(func, subset=subset)
     else:
         return styler.applymap(func, subset=subset)
 
-# HÀM XUẤT FILE EXCEL ĐÃ SỬA LỖI TÊN SHEET HỢP LỆ EXCEL
 def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
     output = io.BytesIO()
-    # Làm sạch ký tự cấm trong tên Sheet: / \ ? * : [ ]
     clean_label = re.sub(r'[\/\\\?\*\:\[\]]', '-', str(label_ky))
-    
     sheet_moi = f"Đặt Mới {clean_label}"[:31]
     sheet_ton = f"Tồn Trước {clean_label}"[:31]
     sheet_done = f"Đã Nhập Kho {clean_label}"[:31]
@@ -177,7 +170,6 @@ def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
         df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
     return output.getvalue()
 
-@st.cache_data(ttl=5)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
@@ -257,7 +249,7 @@ try:
         thang_sel, quy_sel = None, None
         if ky_sel == "Theo Tháng":
             danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=7) # Default Tháng 8
+            thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=7)
             thang_sel = int(thang_chon_str.replace("Tháng ", ""))
         elif ky_sel == "Theo Quý":
             quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=2)
@@ -279,7 +271,6 @@ try:
         nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
         nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
 
-    # 4. LỌC DỮ LIỆU CƠ BẢN
     df_base = df.copy()
 
     if bp_sel != 'Tất cả bộ phận':
@@ -287,7 +278,6 @@ try:
     if nv_sel != 'Tất cả NVKD':
         df_base = df_base[df_base['NV_KD'] == nv_sel]
 
-    # XÁC ĐỊNH MỐC THỜI GIAN BẮT ĐẦU VÀ KẾT THÚC CỦA KỲ BÁO CÁO
     nam_eff = 2026 if nam_sel == 'Tất cả các năm' else int(nam_sel)
     
     if ky_sel == "Theo Tháng" and thang_sel:
@@ -304,23 +294,19 @@ try:
         end_date = pd.Timestamp(year=nam_eff, month=12, day=31)
         ten_ky_hien_thi = f"Năm {nam_eff}"
 
-    # --- LOGIC TÁCH DỮ LIỆU CHUẨN KẾ TOÁN VÀ SẢN XUẤT ---
-    
-    # 1. ĐẶT MỚI TRONG KỲ: Ngày đặt hàng nằm đúng trong kỳ báo cáo
+    # 1. ĐẶT MỚI TRONG KỲ
     cond_dat_moi = (df_base['Ngay_DatHang_DT'] >= start_date) & (df_base['Ngay_DatHang_DT'] <= end_date)
     df_moi = df_base[cond_dat_moi].copy()
 
-    # 2. TỒN TỪ QUÁ KHỨ CHUYỂN SANG: 
-    # Đặt hàng TRƯỚC ngày bắt đầu kỳ VÀ (Chưa từng nhập kho HOẶC Nhập kho TỪ ngày bắt đầu kỳ trở đi)
+    # 2. TỒN LŨY KẾ
     cond_dat_truoc = (df_base['Ngay_DatHang_DT'] < start_date)
     cond_chua_nk_truoc_ky = (~df_base['Da_Nhap_Kho']) | (df_base['Ngay_NK_Check'] >= start_date)
     df_ton = df_base[cond_dat_truoc & cond_chua_nk_truoc_ky].copy()
 
-    # 3. ĐÃ NHẬP KHO TRONG KỲ: Ngày nhập kho thực tế nằm trong kỳ báo cáo
+    # 3. ĐÃ NHẬP KHO TRONG KỲ
     cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
     df_done = df_base[cond_nhap_kho_trong_ky].copy()
 
-    # Lọc theo tình trạng sản xuất nếu có chọn
     if tt_sel != 'Tất cả tình trạng':
         df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
         df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
@@ -328,7 +314,6 @@ try:
 
     st.markdown("---")
 
-    # 5. TAB HIỂN THỊ CÁC NHÓM SẢN PHẨM & NÚT XUẤT EXCEL
     tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
     tabs = st.tabs(tab_names)
 
