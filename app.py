@@ -69,23 +69,27 @@ st.markdown("""
         gap: 8px;
     }
  
-    /* NHÃN BỘ LỌC KIỂU "CHIP" MÀU SẮC */
-    div[data-testid="stWidgetLabel"] {
-        background: linear-gradient(90deg, #e7f0ff, #ffffff) !important;
-        border: 1px solid #b9d4ff !important;
-        border-left: 4px solid #1565c0 !important;
-        border-radius: 8px !important;
-        padding: 4px 10px !important;
-        margin-bottom: 6px !important;
-        width: fit-content !important;
+    /* NHÃN BỘ LỌC KIỂU "CHIP" MÀU SẮC - tự vẽ bằng HTML, không phụ thuộc testid nội bộ của Streamlit */
+    .filter-chip-label {
+        display: inline-block;
+        background: linear-gradient(90deg, #e7f0ff, #ffffff);
+        border: 1px solid #b9d4ff;
+        border-left: 4px solid #1565c0;
+        border-radius: 8px;
+        padding: 5px 12px;
+        margin-bottom: 6px;
+        color: #0d47a1;
+        font-weight: 800;
+        font-size: 14.5px;
+        box-shadow: 0 2px 6px rgba(13,71,161,0.08);
     }
+    /* fallback: nếu bản Streamlit vẫn render label mặc định (label_visibility != collapsed) thì vẫn tô đậm */
     div[data-testid="stWidgetLabel"] label,
     div[data-testid="stWidgetLabel"] p {
         color: #0d47a1 !important;
         font-weight: 800 !important;
         font-size: 14.5px !important;
         opacity: 1 !important;
-        margin: 0 !important;
     }
  
     div[data-baseweb="select"] > div {
@@ -210,22 +214,58 @@ st.markdown("""
         background-clip: text;
     }
  
-    /* ================= BẢNG DỮ LIỆU ================= */
-    div[data-testid="stDataFrame"] {
+    /* ================= BẢNG DỮ LIỆU (HTML table thật, thay cho st.dataframe canvas) ================= */
+    .table-wrap {
+        max-height: 480px;
+        overflow: auto;
         border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 14px rgba(13,71,161,0.10);
-        border: 1px solid #dbe7ff;
+        box-shadow: 0 4px 14px rgba(13,71,161,0.12);
+        border: 1px solid #cfe0ff;
+        margin-bottom: 8px;
     }
-    div[data-testid="stDataFrame"] th {
-        background: linear-gradient(90deg, #0d47a1, #1565c0, #0d47a1) !important;
+    .table-wrap.table-empty {
+        max-height: none;
+        padding: 18px;
+        text-align: center;
+        color: #64748b;
+        font-weight: 600;
+        background: #f8fafc;
+    }
+    .table-wrap table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        font-size: 13.5px;
+        background: #ffffff;
+    }
+    .table-wrap thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1) !important;
         color: #ffffff !important;
         font-weight: 800 !important;
-        font-size: 14.5px !important;
+        font-size: 14px !important;
         text-align: center !important;
+        padding: 10px 12px !important;
+        border-bottom: 2px solid #08306b !important;
+        white-space: nowrap;
     }
-    div[data-testid="stDataFrame"] td {
-        font-size: 13.5px !important;
+    .table-wrap tbody td {
+        padding: 8px 12px !important;
+        color: #0f172a;
+        border-bottom: 1px solid #e6edf7;
+        white-space: nowrap;
+    }
+    .table-wrap tbody tr:nth-child(even) td {
+        background-color: #f4f8ff;
+    }
+    .table-wrap tbody tr:hover td {
+        background-color: #e3f0ff !important;
+        transition: background-color 0.15s ease-in-out;
+    }
+    .table-wrap tbody th {
+        display: none;
     }
  
     /* ================= NÚT TẢI EXCEL ================= */
@@ -329,6 +369,56 @@ def apply_style_safe(styler, func, subset):
     else:
         return styler.applymap(func, subset=subset)
  
+def render_pretty_table(df_show, cols, q_col, table_key):
+    """
+    Render bảng bằng HTML table thật (qua pandas Styler.to_html) thay vì st.dataframe,
+    vì st.dataframe render bằng canvas/WebGL nên CSS không style được tiêu đề/ô.
+    Dùng HTML table cho phép kiểm soát toàn bộ giao diện: header rõ nét, dính khi cuộn, vằn màu.
+    """
+    label_map = {
+        "Bo_Phan_KD": "Bộ Phận",
+        "NV_KD": "NVKD",
+        "Du_An": "Dự Án",
+        "So_DH": "Mã ĐH",
+        "Quy_Cach": "Quy Cách",
+        "DVT": "ĐVT",
+        q_col: "Số Lượng",
+        "Canh_Bao_Tien_Do": "🚨 Cảnh Báo Tiến Độ",
+        "Trang_Thai_SX": "Trạng Thái",
+        "Ngay_Duyet_AB": "Duyệt SX (AB)",
+        "Ngay_KD_Can_AC": "KD Cần (AC)",
+        "Ngay_Chot_AG": "Chốt SX (AG)"
+    }
+ 
+    disp = df_show[cols].copy()
+    for c in ['Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG']:
+        if c in disp.columns:
+            disp[c] = disp[c].dt.strftime('%d/%m/%Y')
+            disp[c] = disp[c].fillna('')
+    if q_col in disp.columns:
+        disp[q_col] = disp[q_col].map(lambda v: f"{v:,.2f}")
+ 
+    disp = disp.rename(columns=label_map)
+    canh_bao_label = label_map.get("Canh_Bao_Tien_Do", "Canh_Bao_Tien_Do")
+ 
+    styler = disp.style
+    if canh_bao_label in disp.columns:
+        styler = apply_style_safe(styler, style_canh_bao, subset=[canh_bao_label])
+ 
+    try:
+        styler = styler.hide(axis='index')
+    except Exception:
+        try:
+            styler = styler.hide_index()
+        except Exception:
+            pass
+ 
+    html = styler.to_html()
+    if len(disp) == 0:
+        st.markdown('<div class="table-wrap table-empty">Không có dữ liệu phù hợp.</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="table-wrap">{html}</div>', unsafe_allow_html=True)
+ 
 def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
     output = io.BytesIO()
     clean_label = re.sub(r'[\/\\\?\*\:\[\]]', '-', str(label_ky))
@@ -422,37 +512,45 @@ def render_dashboard():
             f1, f2, f3, f4, f5 = st.columns(5)
  
             with f1:
+                st.markdown('<div class="filter-chip-label">📅 Chọn Năm Báo Cáo</div>', unsafe_allow_html=True)
                 nam_list = ['Tất cả các năm'] + sorted(list(df['Nam_DatHang'].unique()))
-                nam_sel = st.selectbox("📅 Chọn Năm Báo Cáo", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0)
+                nam_sel = st.selectbox("Chọn Năm Báo Cáo", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0, label_visibility="collapsed")
  
             with f2:
-                ky_sel = st.selectbox("⏱️ Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm"])
+                st.markdown('<div class="filter-chip-label">⏱️ Kỳ Báo Cáo</div>', unsafe_allow_html=True)
+                ky_sel = st.selectbox("Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm"], label_visibility="collapsed")
  
             with f3:
                 thang_sel, quy_sel = None, None
                 if ky_sel == "Theo Tháng":
+                    st.markdown('<div class="filter-chip-label">🗓️ Chọn Tháng</div>', unsafe_allow_html=True)
                     danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-                    thang_chon_str = st.selectbox("🗓️ Chọn Tháng", danh_sach_thang, index=7)
+                    thang_chon_str = st.selectbox("Chọn Tháng", danh_sach_thang, index=7, label_visibility="collapsed")
                     thang_sel = int(thang_chon_str.replace("Tháng ", ""))
                 elif ky_sel == "Theo Quý":
-                    quy_chon_str = st.selectbox("📊 Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=2)
+                    st.markdown('<div class="filter-chip-label">📊 Chọn Quý</div>', unsafe_allow_html=True)
+                    quy_chon_str = st.selectbox("Chọn Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=2, label_visibility="collapsed")
                     quy_sel = int(quy_chon_str.replace("Quý ", ""))
                 else:
-                    st.selectbox("🗓️ Chi Tiết Kỳ", ["Tất cả (Cả năm)"], disabled=True)
+                    st.markdown('<div class="filter-chip-label">🗓️ Chi Tiết Kỳ</div>', unsafe_allow_html=True)
+                    st.selectbox("Chi Tiết Kỳ", ["Tất cả (Cả năm)"], disabled=True, label_visibility="collapsed")
  
             with f4:
+                st.markdown('<div class="filter-chip-label">🏭 Tình Trạng SX</div>', unsafe_allow_html=True)
                 tt_list = ['Tất cả tình trạng'] + sorted(list(df['Trang_Thai_SX'].unique()))
-                tt_sel = st.selectbox("🏭 Tình Trạng SX", tt_list)
+                tt_sel = st.selectbox("Tình Trạng SX", tt_list, label_visibility="collapsed")
  
             with f5:
+                st.markdown('<div class="filter-chip-label">🏢 Bộ Phận KD</div>', unsafe_allow_html=True)
                 bp_list = ['Tất cả bộ phận'] + sorted([x for x in df['Bo_Phan_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
-                bp_sel = st.selectbox("🏢 Bộ Phận KD", bp_list)
+                bp_sel = st.selectbox("Bộ Phận KD", bp_list, label_visibility="collapsed")
  
             col_nv, _ = st.columns([2, 3])
             with col_nv:
+                st.markdown('<div class="filter-chip-label">👤 Nhân Viên KD</div>', unsafe_allow_html=True)
                 df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
                 nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
-                nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
+                nv_sel = st.selectbox("Nhân Viên KD", nv_list, label_visibility="collapsed")
  
         df_base = df.copy()
  
@@ -568,29 +666,14 @@ def render_dashboard():
                     f"✅ Đơn Đã Nhập Kho Trong Kỳ ({len(sub_done)} dòng)"
                 ])
  
-                column_cfg = {
-                    "Bo_Phan_KD": "Bộ Phận",
-                    "NV_KD": "NVKD",
-                    "Du_An": "Dự Án",
-                    "So_DH": "Mã ĐH",
-                    "Quy_Cach": "Quy Cách",
-                    "DVT": "ĐVT",
-                    q_col: st.column_config.NumberColumn("Số Lượng", format="%.2f"),
-                    "Canh_Bao_Tien_Do": st.column_config.TextColumn("🚨 Cảnh Báo Tiến Độ", width="medium"),
-                    "Trang_Thai_SX": "Trạng Thái",
-                    "Ngay_Duyet_AB": st.column_config.DateColumn("Duyệt SX (AB)", format="DD/MM/YYYY"),
-                    "Ngay_KD_Can_AC": st.column_config.DateColumn("KD Cần (AC)", format="DD/MM/YYYY"),
-                    "Ngay_Chot_AG": st.column_config.DateColumn("Chốt SX (AG)", format="DD/MM/YYYY")
-                }
- 
                 with sub_tab1:
-                    st.dataframe(apply_style_safe(sub_moi[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                    render_pretty_table(sub_moi, cols_display, q_col, f"moi_{i}")
  
                 with sub_tab2:
-                    st.dataframe(apply_style_safe(sub_ton[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                    render_pretty_table(sub_ton, cols_display, q_col, f"ton_{i}")
  
                 with sub_tab3:
-                    st.dataframe(apply_style_safe(sub_done[cols_display].style, style_canh_bao, subset=['Canh_Bao_Tien_Do']), column_config=column_cfg, use_container_width=True, hide_index=True)
+                    render_pretty_table(sub_done, cols_display, q_col, f"done_{i}")
  
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
