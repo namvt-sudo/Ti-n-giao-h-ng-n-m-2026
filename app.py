@@ -761,7 +761,7 @@ def render_dashboard():
         st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
         # TAB DANH MỤC
-        tab_names = ['🗓️ Kế Hoạch Sản Xuất', '📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
+        tab_names = ['🗓️ Kế Hoạch Sản Xuất', '⏸️ Tạm Dừng SX', '📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
  
         qty_mapping = {
@@ -781,6 +781,9 @@ def render_dashboard():
                     # sản phẩm rồi tách sản lượng ra theo từng loại để xem tổng quan.
                     q_col = 'So_Luong_Tong_DH'
                     df_khsx = pd.concat([df_moi, df_ton]).copy()
+                    # Loại bỏ đơn đang "Tạm dừng SX" ra khỏi kế hoạch - chỉ giữ đơn
+                    # "Chưa sản xuất" và "Đang sản xuất" (áp dụng cả với tồn đầu kỳ).
+                    df_khsx = df_khsx[~df_khsx['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
  
                     cols_display = [
                         'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
@@ -837,6 +840,69 @@ def render_dashboard():
  
                     st.caption(f"📄 {len(df_khsx)} dòng")
                     render_pretty_table(df_khsx, cols_display, q_col, f"khsx_{i}")
+ 
+                    continue
+ 
+                if tname == '⏸️ Tạm Dừng SX':
+                    # Hiện riêng các đơn đang bị Tạm Dừng SX (cả đặt mới trong kỳ lẫn
+                    # tồn đầu kỳ), để theo dõi bao nhiêu đơn/số lượng đang bị treo lại.
+                    q_col = 'So_Luong_Tong_DH'
+                    df_tamdung = pd.concat([df_moi, df_ton]).copy()
+                    df_tamdung = df_tamdung[df_tamdung['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
+ 
+                    cols_display = [
+                        'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
+                        'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC',
+                        'Ngay_Chot_AG', 'Ngay_NhapKho_DT'
+                    ]
+ 
+                    sl_tong_tamdung = df_tamdung[q_col].sum()
+                    so_don_tamdung = len(df_tamdung)
+ 
+                    sl_goi_chau = df_tamdung['SL_GoiChau'].sum()
+                    sl_khe_rang_luoc = df_tamdung['SL_KheRangLuoc'].sum()
+                    sl_tam_vco = df_tamdung['SL_TamVCO'].sum()
+                    sl_cot_h = df_tamdung['SL_HeCotPhuKien'].sum()
+                    sl_khac = df_tamdung['SL_NhomKhac'].sum()
+ 
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    m0, m1, m2, m3, m4, m5, m6 = st.columns(7)
+                    m0.metric("⏸️ Số Đơn Tạm Dừng", f"{so_don_tamdung:,}")
+                    m1.metric("📦 Gối Chậu", f"{sl_goi_chau:,.2f}")
+                    m2.metric("⚙️ Khe Răng Lược", f"{sl_khe_rang_luoc:,.2f}")
+                    m3.metric("🧱 Tấm VCO", f"{sl_tam_vco:,.2f}")
+                    m4.metric("🏗️ Cột H (Phụ Kiện)", f"{sl_cot_h:,.2f}")
+                    m5.metric("📋 Sản Phẩm Khác", f"{sl_khac:,.2f}")
+                    m6.metric("🎯 Tổng Cộng", f"{sl_tong_tamdung:,.2f}")
+ 
+                    st.caption(f"📋 Tổng số {so_don_tamdung:,} đơn hàng đang Tạm Dừng SX (Đặt Mới {ten_ky_hien_thi} + Tồn Lũy Kế Chuyển Sang)")
+ 
+                    st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
+ 
+                    col_search, col_export = st.columns([3, 1])
+                    with col_search:
+                        search_kw = st.text_input("🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
+                    if search_kw:
+                        df_tamdung = df_tamdung[df_tamdung['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+ 
+                    with col_export:
+                        st.write("")
+                        st.write("")
+                        excel_buf = io.BytesIO()
+                        sheet_name = re.sub(r'[\/\\\?\*\:\[\]]', '-', f"TamDungSX {ten_ky_hien_thi}")[:31]
+                        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+                            df_tamdung[cols_display].to_excel(writer, index=False, sheet_name=sheet_name)
+                        st.download_button(
+                            label="📥 Trích Excel (Tạm Dừng SX)",
+                            data=excel_buf.getvalue(),
+                            file_name=f"Tam_Dung_SX_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key=f"btn_ex_{i}"
+                        )
+ 
+                    st.caption(f"📄 {len(df_tamdung)} dòng")
+                    render_pretty_table(df_tamdung, cols_display, q_col, f"tamdung_{i}")
  
                     continue
  
