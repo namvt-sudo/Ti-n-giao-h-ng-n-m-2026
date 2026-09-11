@@ -4,7 +4,7 @@ import io
 import re
 from datetime import datetime
 
-# 1. CẤU HÌNH TRANG WEB & TỐI ƯU CSS NỔI BẬT
+# 1. CẤU HÌNH TRANG WEB & TỐI ƯU CSS CHO THANH TAB NỔI BẬT
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -21,48 +21,77 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
 
-    /* TIÊU ĐỀ BỘ LỌC NỔI BẬT */
-    .filter-header-box {
-        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-        color: #ffffff !important;
-        padding: 10px 18px;
-        border-radius: 8px 8px 0px 0px;
-        font-size: 16px;
+    /* TIÊU ĐỀ BỘ LỌC ĐẸP & CHUYÊN NGHIỆP */
+    .sub-title-clean {
+        color: #0d47a1;
+        font-size: 20px;
         font-weight: 800;
-        letter-spacing: 0.5px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-top: 10px;
+        margin-bottom: 15px;
     }
 
-    /* NHÃN TIÊU ĐỀ CÁC Ô CHỌN (KỂ CẢ "CHỌN THÁNG") - ĐẬM, ĐEN, NỔI BẬT */
-    div[data-testid="stWidgetLabel"] p, label[data-testid="stWidgetLabel"] {
+    /* NHÃN TIÊU ĐỀ BỘ LỌC ĐẬM VÀ RÕ NÉT */
+    div[data-testid="stWidgetLabel"] label, 
+    div[data-testid="stWidgetLabel"] p {
         color: #0f172a !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         font-size: 15px !important;
-        margin-bottom: 6px !important;
+        opacity: 1 !important;
     }
 
-    /* TỐI ƯU GIAO DIỆN CÁC Ô SELECTBOX */
+    /* VIỀN VÀ KHUNG Ô CHỌN SELECTBOX */
     div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         border-radius: 8px !important;
-        border: 2px solid #94a3b8 !important; /* Viền xám đậm rõ nét */
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04) !important;
-    }
-    
-    /* CHỮ TRONG Ô SELECTBOX ĐẬM RÕ NÉT */
-    div[data-baseweb="select"] * {
-        color: #0f172a !important;
-        font-weight: 600 !important;
+        border: 1.5px solid #94a3b8 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     }
 
-    /* HIỆU ỨNG HOVER CHO CÁC Ô CHỌN */
-    div[data-baseweb="select"]:hover > div {
+    /* ========================================================= */
+    /* NỔI BẬT KHUNG VÀ CHỮ CHO DÃY TAB (GỐI CHẬU, KHE RĂNG LƯỢC...) */
+    /* ========================================================= */
+    
+    /* Khoảng cách giữa các Tab */
+    div[data-baseweb="tab-list"] {
+        gap: 12px !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        padding-bottom: 8px !important;
+    }
+
+    /* Trạng thái Tab THƯỜNG (Chưa chọn): Có khung rõ, chữ đậm, nền xám nhạt */
+    button[data-baseweb="tab"] {
+        background-color: #ffffff !important;
+        border: 2px solid #94a3b8 !important; /* Tạo khung rõ ràng */
+        border-radius: 8px !important;        /* Bo góc khung */
+        padding: 8px 18px !important;
+        font-weight: 800 !important;          /* Làm chữ in đậm */
+        font-size: 15px !important;
+        color: #1e293b !important;            /* Màu chữ tối rõ nét */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    /* Hiệu ứng RÊ CHUỘT vào Tab */
+    button[data-baseweb="tab"]:hover {
         border-color: #1976d2 !important;
-        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15) !important;
+        color: #1976d2 !important;
+        background-color: #f0f7ff !important;
+        transform: translateY(-2px);
+    }
+
+    /* Trạng thái Tab ĐƯỢC CHỌN (Active): Nền xanh, chữ trắng nổi bật */
+    button[aria-selected="true"] {
+        background-color: #1565c0 !important;  /* Nền xanh đậm nổi bật */
+        border-color: #0d47a1 !important;
+        color: #ffffff !important;            /* Chữ màu trắng */
+        font-weight: 800 !important;
+        box-shadow: 0 4px 10px rgba(21, 101, 192, 0.35) !important;
+    }
+
+    /* Màu chữ hiển thị bên trong nút Tab */
+    button[aria-selected="true"] p, 
+    button[aria-selected="true"] span {
+        color: #ffffff !important;
     }
 
     /* METRIC CARDS */
@@ -83,23 +112,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* TAB CHUYỂN TRANG NỔI BẬT */
-    div[data-baseweb="tab-list"] { gap: 10px; }
-    button[data-baseweb="tab"] {
-        border-radius: 12px !important;
-        padding: 8px 20px !important;
-        background-color: #f1f5f9 !important;
-        border: 1.5px solid #cbd5e1 !important;
-        font-weight: 700 !important;
-        color: #334155 !important;
-    }
-    button[aria-selected="true"] {
-        background-color: #1976d2 !important;
-        color: #ffffff !important;
-        box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3) !important;
-        border-color: #1976d2 !important;
-    }
-
     /* BẢNG DỮ LIỆU */
     div[data-testid="stDataFrame"] th {
         background-color: #0d47a1 !important;
@@ -111,7 +123,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CÁC HÀM XỬ LÝ DỮ LIỆU
+# 2. HÀM XỬ LÝ DỮ LIỆU
 GGS_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/edit?usp=sharing"
 
 def get_ggs_export_url(url):
@@ -273,8 +285,7 @@ def render_dashboard():
     try:
         df = load_data()
 
-        # THANH TIÊU ĐỀ BỘ LỌC XANH BANNER TÁCH BIỆT NỔI BẬT
-        st.markdown('<div class="filter-header-box">🎯 BỘ LỌC TIẾN ĐỘ SẢN XUẤT & SẢN LƯỢNG</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-title-clean">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>', unsafe_allow_html=True)
 
         f1, f2, f3, f4, f5 = st.columns(5)
 
@@ -334,16 +345,14 @@ def render_dashboard():
             end_date = pd.Timestamp(year=nam_eff, month=12, day=31)
             ten_ky_hien_thi = f"Năm {nam_eff}"
 
-        # 1. ĐẶT MỚI TRONG KỲ
+        # LỌC DỮ LIỆU
         cond_dat_moi = (df_base['Ngay_DatHang_DT'] >= start_date) & (df_base['Ngay_DatHang_DT'] <= end_date)
         df_moi = df_base[cond_dat_moi].copy()
 
-        # 2. TỒN LŨY KẾ
         cond_dat_truoc = (df_base['Ngay_DatHang_DT'] < start_date)
         cond_chua_nk_truoc_ky = (~df_base['Da_Nhap_Kho']) | (df_base['Ngay_NK_Check'] >= start_date)
         df_ton = df_base[cond_dat_truoc & cond_chua_nk_truoc_ky].copy()
 
-        # 3. ĐÃ NHẬP KHO TRONG KỲ
         cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
         df_done = df_base[cond_nhap_kho_trong_ky].copy()
 
@@ -354,6 +363,7 @@ def render_dashboard():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # TAB DANH MỤC ĐÃ ĐƯỢC TẠO KHUNG VÀ LÀM NỔI BẬT
         tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
 
@@ -387,6 +397,7 @@ def render_dashboard():
                 sl_da_nhap_kho = sub_done[q_col].sum()
                 sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
 
+                st.markdown("<br>", unsafe_allow_html=True)
                 m1, m2, m3, m4, m5 = st.columns(5)
                 m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
                 m2.metric(f"⏳ Tồn Lũy Kế Chuyển Sang", f"{sl_ton_chuyen_sang:,.2f}")
