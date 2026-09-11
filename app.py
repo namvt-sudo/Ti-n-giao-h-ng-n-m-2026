@@ -361,6 +361,29 @@ st.markdown("""
         display: none;
     }
  
+    /* Cột "Dự Án" (thứ 4) và "Quy Cách" (thứ 5) trong bảng: mặc định rút gọn bớt
+       (hiện dấu "...") cho gọn màn hình, khi di chuột vào thì tự mở rộng ra xem
+       đầy đủ nội dung, không làm xô lệch các cột khác. */
+    .table-wrap tbody td:nth-child(4),
+    .table-wrap tbody td:nth-child(5) {
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap !important;
+        cursor: pointer;
+    }
+    .table-wrap tbody td:nth-child(4):hover,
+    .table-wrap tbody td:nth-child(5):hover {
+        max-width: none;
+        overflow: visible;
+        white-space: normal !important;
+        position: relative;
+        z-index: 5;
+        background-color: #fff9c4 !important;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.20);
+        border-radius: 6px;
+    }
+ 
     /* ================= NÚT TẢI EXCEL ================= */
     div[data-testid="stDownloadButton"] button {
         background: linear-gradient(90deg, #0d47a1, #00b4d8) !important;
