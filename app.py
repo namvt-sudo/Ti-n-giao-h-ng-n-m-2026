@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import io
 import re
@@ -423,22 +422,23 @@ def render_pretty_table(df_show, cols, q_col, table_key):
     Dùng HTML table cho phép kiểm soát toàn bộ giao diện: header rõ nét, dính khi cuộn, vằn màu.
     """
     label_map = {
+        "So_DH": "Mã ĐH",
         "Bo_Phan_KD": "Bộ Phận",
         "NV_KD": "NVKD",
         "Du_An": "Dự Án",
-        "So_DH": "Mã ĐH",
         "Quy_Cach": "Quy Cách",
         "DVT": "ĐVT",
         q_col: "Số Lượng",
         "Canh_Bao_Tien_Do": "🚨 Cảnh Báo Tiến Độ",
         "Trang_Thai_SX": "Trạng Thái",
-        "Ngay_Duyet_AB": "Duyệt SX (AB)",
-        "Ngay_KD_Can_AC": "KD Cần (AC)",
-        "Ngay_Chot_AG": "Chốt SX (AG)"
+        "Ngay_Duyet_AB": "Duyệt Base SX",
+        "Ngay_KD_Can_AC": "KD Cần Ngày Giao Hàng",
+        "Ngay_Chot_AG": "Chốt Tiến Độ Giao Hàng VHIP-KD",
+        "Ngay_NhapKho_DT": "Ngày Nhập Kho Thực Tế"
     }
  
     disp = df_show[cols].copy()
-    for c in ['Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG']:
+    for c in ['Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']:
         if c in disp.columns:
             disp[c] = disp[c].dt.strftime('%d/%m/%Y')
             disp[c] = disp[c].fillna('')
@@ -484,7 +484,7 @@ def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
         df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
     return output.getvalue()
  
-@st.cache_data(ttl=10, show_spinner=False)
+@st.cache_data(ttl=180, show_spinner=False)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
@@ -548,14 +548,27 @@ def load_data():
  
  
 # 3. DASHBOARD MAIN RENDER
-# Lưu ý: st.fragment(run_every=...) mặc định sẽ làm Streamlit gắn cờ "stale" lên
-# các phần tử trong lúc rerun, khiến chúng bị mờ đi trong chốc lát. Đoạn CSS
-# [data-stale="true"] ở trên đã ép opacity = 1 để loại bỏ hoàn toàn hiệu ứng này.
-@st.fragment(run_every=10)
+# Lưu ý về nhấp nháy: st.fragment(run_every=...) khi chạy lại sẽ luôn kèm theo
+# một hiệu ứng "đang tải" mặc định của Streamlit (không có cách nào tắt hẳn bằng
+# CSS/JS một cách đáng tin cậy). Thay vì cố tắt hiệu ứng đó, cách xử lý dứt điểm
+# là GIẢM TẦN SUẤT rerun xuống rất thấp (3 phút/lần thay vì 10 giây/lần) để hiệu
+# ứng gần như không còn xuất hiện trong quá trình sử dụng bình thường, đồng thời
+# bổ sung nút "Làm Mới Ngay" để người dùng chủ động cập nhật tức thời khi cần.
+KHOANG_CACH_TU_DONG_GIAY = 180  # 3 phút/lần
+ 
+@st.fragment(run_every=KHOANG_CACH_TU_DONG_GIAY)
 def render_dashboard():
     thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
  
-    st.markdown(f'<div class="update-badge">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
+    col_badge, col_refresh = st.columns([5, 1])
+    with col_badge:
+        st.markdown(f'<div class="update-badge">🔄 Cập nhật lúc: {thoi_gian_cap_nhat} (tự động mỗi 3 phút)</div>', unsafe_allow_html=True)
+    with col_refresh:
+        if st.button("⚡ Làm Mới Ngay", use_container_width=True, key="btn_lam_moi_ngay"):
+            # Chỉ cần xoá cache; việc bấm nút bên trong fragment đã tự động
+            # kích hoạt rerun (chỉ riêng fragment này) - không cần gọi st.rerun().
+            load_data.clear()
+ 
     st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
  
     try:
@@ -672,9 +685,13 @@ def render_dashboard():
                     sub_ton = df_ton[df_ton[q_col] > 0].copy()
                     sub_done = df_done[df_done[q_col] > 0].copy()
  
+                # Thứ tự cột hiển thị: Mã ĐH -> Bộ Phận -> NVKD -> Dự Án -> Quy Cách -> ĐVT ->
+                # Số Lượng -> Cảnh Báo Tiến Độ -> Trạng Thái -> Duyệt Base SX ->
+                # KD Cần Ngày Giao Hàng -> Chốt Tiến Độ Giao Hàng VHIP-KD -> Ngày Nhập Kho Thực Tế (cột AH)
                 cols_display = [
-                    'Bo_Phan_KD', 'NV_KD', 'Du_An', 'So_DH', 'Quy_Cach', 'DVT', q_col,
-                    'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG'
+                    'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
+                    'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC',
+                    'Ngay_Chot_AG', 'Ngay_NhapKho_DT'
                 ]
  
                 sl_dat_moi = sub_moi[q_col].sum()
@@ -740,55 +757,6 @@ def render_dashboard():
  
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
- 
-# JS "canh gác" chạy nền: liên tục theo dõi toàn bộ trang, hễ Streamlit cố gắn
-# opacity mờ / thuộc tính data-stale lên bất kỳ phần tử nào trong lúc fragment
-# tự động rerun thì lập tức ép về opacity: 1 ngay lập tức. Vì đây là JS chạy
-# runtime thay vì CSS tĩnh, nên không phụ thuộc vào việc đoán đúng tên class/
-# attribute nội bộ của từng phiên bản Streamlit - luôn phản ứng theo thời gian
-# thực, gần như loại bỏ hoàn toàn cảm giác mờ/nháy.
-def _chong_nhap_nhay():
-    js_code = """
-    <script>
-    (function() {
-        function fixDoc(doc) {
-            try {
-                doc.querySelectorAll('[data-stale="true"]').forEach(function(el) {
-                    el.removeAttribute('data-stale');
-                    el.style.setProperty('opacity', '1', 'important');
-                    el.style.setProperty('transition', 'none', 'important');
-                });
-                doc.querySelectorAll('[style*="opacity"]').forEach(function(el) {
-                    var op = el.style.opacity;
-                    if (op && parseFloat(op) < 1) {
-                        el.style.setProperty('opacity', '1', 'important');
-                    }
-                });
-            } catch (e) {}
-        }
-        function attach() {
-            try {
-                var doc = window.parent.document;
-                fixDoc(doc);
-                var observer = new MutationObserver(function() { fixDoc(doc); });
-                observer.observe(doc.body, {
-                    attributes: true,
-                    childList: true,
-                    subtree: true,
-                    attributeFilter: ['style', 'data-stale', 'class']
-                });
-            } catch (e) {}
-        }
-        attach();
-        setInterval(function() {
-            try { fixDoc(window.parent.document); } catch (e) {}
-        }, 300);
-    })();
-    </script>
-    """
-    components.html(js_code, height=0, width=0)
- 
-_chong_nhap_nhay()
  
 # CHẠY HÀM DASHBOARD
 render_dashboard()
