@@ -215,6 +215,17 @@ st.markdown("""
         animation: none !important;
     }
  
+    /* Chặn hiệu ứng fade-in mặc định mà Streamlit áp cho các khối nội dung
+       mỗi khi phần tử được (re)mount trong lúc fragment tự động rerun */
+    .element-container,
+    .stMarkdown,
+    div[data-testid="stMarkdownContainer"],
+    div[data-testid="stMetric"],
+    .table-wrap {
+        animation: none !important;
+        transition: none !important;
+    }
+ 
     /* Tab con (Đơn Đặt Mới / Tồn / Đã Nhập Kho) - kiểu pill nhỏ nhẹ nhàng */
     div[data-testid="stTabs"] div[data-testid="stTabs"] [role="tab"] {
         border-radius: 20px !important;
@@ -437,6 +448,11 @@ def render_pretty_table(df_show, cols, q_col, table_key):
     canh_bao_label = label_map.get("Canh_Bao_Tien_Do", "Canh_Bao_Tien_Do")
  
     styler = disp.style
+    # QUAN TRỌNG: gán uuid CỐ ĐỊNH cho bảng (thay vì để pandas tự sinh UUID ngẫu nhiên
+    # mỗi lần gọi to_html()). Nếu không, dù dữ liệu giống hệt nhau, chuỗi HTML xuất ra
+    # vẫn khác nhau ở mỗi lần fragment tự rerun -> trình duyệt phải vẽ lại TOÀN BỘ bảng
+    # -> đây chính là nguyên nhân gây nhấp nháy/giật khi tự động cập nhật.
+    styler = styler.set_uuid(re.sub(r'[^a-zA-Z0-9_-]', '_', str(table_key)))
     if canh_bao_label in disp.columns:
         styler = apply_style_safe(styler, style_canh_bao, subset=[canh_bao_label])
  
@@ -467,6 +483,7 @@ def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
         df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
     return output.getvalue()
  
+@st.cache_data(ttl=10, show_spinner=False)
 def load_data():
     csv_url = get_ggs_export_url(GGS_URL)
     df_raw = pd.read_csv(csv_url, header=None, dtype=str)
@@ -726,3 +743,5 @@ def render_dashboard():
 # CHẠY HÀM DASHBOARD
 render_dashboard()
  
+
+
