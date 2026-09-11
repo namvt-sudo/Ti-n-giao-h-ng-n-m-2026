@@ -4,7 +4,7 @@ import io
 import re
 from datetime import datetime
 
-# 1. CẤU HÌNH TRANG WEB & GIAO DIỆN SANG TRỌNG
+# 1. CẤU HÌNH TRANG WEB & TỐI ƯU CSS NỔI BẬT
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -14,56 +14,55 @@ st.markdown("""
     
     .main-title {
         color: #0d47a1;
-        font-size: 30px;
+        font-size: 28px;
         font-weight: 800;
         text-transform: uppercase;
         margin-bottom: 15px;
         letter-spacing: 0.5px;
     }
 
-    /* KHOANH VÙNG BỘ LỌC (CARD CONTAINER) */
-    .filter-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        padding: 20px 24px 10px 24px;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        border-left: 6px solid #1976d2;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        margin-bottom: 25px;
-    }
-
-    /* Tiêu đề Bộ Lọc */
-    .filter-header {
-        color: #0d47a1;
-        font-size: 18px;
+    /* TIÊU ĐỀ BỘ LỌC NỔI BẬT */
+    .filter-header-box {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        color: #ffffff !important;
+        padding: 10px 18px;
+        border-radius: 8px 8px 0px 0px;
+        font-size: 16px;
         font-weight: 800;
-        text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         display: flex;
         align-items: center;
         gap: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    /* NHÃN CÁC Ô CHỌN (KỂ CẢ "CHỌN THÁNG") - NỔI BẬT & RÕ NÉT */
-    div[data-testid="stWidgetLabel"] p {
+    /* NHÃN TIÊU ĐỀ CÁC Ô CHỌN (KỂ CẢ "CHỌN THÁNG") - ĐẬM, ĐEN, NỔI BẬT */
+    div[data-testid="stWidgetLabel"] p, label[data-testid="stWidgetLabel"] {
         color: #0f172a !important;
-        font-weight: 700 !important;
-        font-size: 14.5px !important;
-        margin-bottom: 4px !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        margin-bottom: 6px !important;
     }
 
-    /* ĐỊNH DẠNG Ô SELECTBOX TRỰC QUAN */
+    /* TỐI ƯU GIAO DIỆN CÁC Ô SELECTBOX */
     div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         border-radius: 8px !important;
-        border: 1.5px solid #cbd5e1 !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
-        transition: all 0.2s ease-in-out;
+        border: 2px solid #94a3b8 !important; /* Viền xám đậm rõ nét */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04) !important;
     }
+    
+    /* CHỮ TRONG Ô SELECTBOX ĐẬM RÕ NÉT */
+    div[data-baseweb="select"] * {
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+
+    /* HIỆU ỨNG HOVER CHO CÁC Ô CHỌN */
     div[data-baseweb="select"]:hover > div {
         border-color: #1976d2 !important;
-        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1) !important;
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15) !important;
     }
 
     /* METRIC CARDS */
@@ -84,20 +83,21 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* TAB CHUYỂN TRANG */
+    /* TAB CHUYỂN TRANG NỔI BẬT */
     div[data-baseweb="tab-list"] { gap: 10px; }
     button[data-baseweb="tab"] {
-        border-radius: 20px !important;
+        border-radius: 12px !important;
         padding: 8px 20px !important;
-        background-color: #f1f3f5 !important;
-        border: 1px solid #ced4da !important;
+        background-color: #f1f5f9 !important;
+        border: 1.5px solid #cbd5e1 !important;
         font-weight: 700 !important;
-        color: #495057 !important;
+        color: #334155 !important;
     }
     button[aria-selected="true"] {
         background-color: #1976d2 !important;
-        color: white !important;
-        box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4) !important;
+        color: #ffffff !important;
+        box-shadow: 0 3px 8px rgba(25, 118, 210, 0.3) !important;
+        border-color: #1976d2 !important;
     }
 
     /* BẢNG DỮ LIỆU */
@@ -273,9 +273,8 @@ def render_dashboard():
     try:
         df = load_data()
 
-        # BỘ LỌC ĐƯỢC BỌC TRONG KHUNG CARD THẨM MỸ HIGH-END
-        st.markdown('<div class="filter-card">', unsafe_allow_html=True)
-        st.markdown('<div class="filter-header">🎯 BỘ LỌC TIẾN ĐỘ SẢN XUẤT & SẢN LƯỢNG</div>', unsafe_allow_html=True)
+        # THANH TIÊU ĐỀ BỘ LỌC XANH BANNER TÁCH BIỆT NỔI BẬT
+        st.markdown('<div class="filter-header-box">🎯 BỘ LỌC TIẾN ĐỘ SẢN XUẤT & SẢN LƯỢNG</div>', unsafe_allow_html=True)
 
         f1, f2, f3, f4, f5 = st.columns(5)
 
@@ -311,8 +310,6 @@ def render_dashboard():
             df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
             nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
             nv_sel = st.selectbox("👤 Nhân Viên KD", nv_list)
-
-        st.markdown('</div>', unsafe_allow_html=True) # Đóng div filter-card
 
         df_base = df.copy()
 
@@ -354,6 +351,8 @@ def render_dashboard():
             df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
             df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
             df_done = df_done[df_done['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
