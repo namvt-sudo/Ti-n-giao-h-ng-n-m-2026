@@ -753,12 +753,14 @@ def render_dashboard():
             with tabs[i]:
                 if tname == '🗓️ Kế Hoạch Sản Xuất':
                     # Kế hoạch sản xuất: gộp TẤT CẢ loại sản phẩm (không tách Khe/Gối Chậu...),
-                    # lấy theo Ngày Chốt Tiến Độ Giao Hàng VHIP-KD rơi vào kỳ đang chọn,
+                    # lấy theo Ngày KD Cần Giao Hàng rơi vào kỳ đang chọn (dùng ngày này vì
+                    # cột Chốt SX cần cả SX và KD cùng thống nhất mới điền được, nên KD Cần
+                    # Giao Hàng luôn có sẵn sớm hơn để lên kế hoạch sản xuất trước),
                     # chỉ hiện đơn CHƯA nhập kho (còn cần sản xuất).
                     q_col = 'So_Luong_Tong_DH'
                     df_khsx = df_base[
-                        (df_base['Ngay_Chot_AG'] >= start_date) &
-                        (df_base['Ngay_Chot_AG'] <= end_date) &
+                        (df_base['Ngay_KD_Can_AC'] >= start_date) &
+                        (df_base['Ngay_KD_Can_AC'] <= end_date) &
                         (~df_base['Da_Nhap_Kho'])
                     ].copy()
                     if tt_sel != 'Tất cả tình trạng':
@@ -775,7 +777,7 @@ def render_dashboard():
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                     m1, m2 = st.columns(2)
-                    m1.metric(f"🗓️ Tổng SL Cần SX (Chốt giao trong {ten_ky_hien_thi})", f"{sl_can_sx:,.2f}")
+                    m1.metric(f"🗓️ Tổng SL Cần SX (KD Cần giao trong {ten_ky_hien_thi})", f"{sl_can_sx:,.2f}")
                     m2.metric("📋 Số Đơn Hàng", f"{so_don:,}")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
@@ -907,3 +909,5 @@ with col_logout:
  
 render_dashboard()
  
+
+
