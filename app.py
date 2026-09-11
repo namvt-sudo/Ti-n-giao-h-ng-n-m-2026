@@ -775,10 +775,27 @@ def render_dashboard():
                     sl_can_sx = df_khsx[q_col].sum()
                     so_don = len(df_khsx)
  
+                    # Tách theo Ngày Đặt Hàng để có đủ 5 ô chỉ số đồng bộ với các tab khác:
+                    # Đặt Mới (đặt hàng trong kỳ) / Tồn Lũy Kế (đặt hàng từ trước) - cả 2 đều
+                    # đã được lọc sẵn theo "chưa nhập kho" nên Nhập Kho luôn = 0 và
+                    # Còn Phải SX = Tổng Cần Sản Xuất (đúng bản chất của tab Kế Hoạch SX).
+                    sub_moi_khsx = df_khsx[(df_khsx['Ngay_DatHang_DT'] >= start_date) & (df_khsx['Ngay_DatHang_DT'] <= end_date)]
+                    sub_ton_khsx = df_khsx[df_khsx['Ngay_DatHang_DT'] < start_date]
+                    sl_dat_moi = sub_moi_khsx[q_col].sum()
+                    sl_ton_chuyen_sang = sub_ton_khsx[q_col].sum()
+                    sl_tong_can_sx = sl_can_sx
+                    sl_da_nhap_kho = 0.0
+                    sl_con_lai = sl_tong_can_sx
+ 
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                    m1, m2 = st.columns(2)
-                    m1.metric(f"🗓️ Tổng SL Cần SX (KD Cần giao trong {ten_ky_hien_thi})", f"{sl_can_sx:,.2f}")
-                    m2.metric("📋 Số Đơn Hàng", f"{so_don:,}")
+                    m1, m2, m3, m4, m5 = st.columns(5)
+                    m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
+                    m2.metric(f"⏳ Tồn Lũy Kế Chuyển Sang", f"{sl_ton_chuyen_sang:,.2f}")
+                    m3.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
+                    m4.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
+                    m5.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
+ 
+                    st.caption(f"📋 Tổng số {so_don:,} đơn hàng cần sản xuất (theo Ngày KD Cần Giao Hàng)")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
@@ -909,5 +926,3 @@ with col_logout:
  
 render_dashboard()
  
-
-
