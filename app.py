@@ -775,19 +775,12 @@ def render_dashboard():
         for i, tname in enumerate(tab_names):
             with tabs[i]:
                 if tname == '🗓️ Kế Hoạch Sản Xuất':
-                    # Kế hoạch sản xuất: gộp TẤT CẢ loại sản phẩm (không tách Khe/Gối Chậu...),
-                    # lấy theo Ngày KD Cần Giao Hàng rơi vào kỳ đang chọn (dùng ngày này vì
-                    # cột Chốt SX cần cả SX và KD cùng thống nhất mới điền được, nên KD Cần
-                    # Giao Hàng luôn có sẵn sớm hơn để lên kế hoạch sản xuất trước),
-                    # chỉ hiện đơn CHƯA nhập kho (còn cần sản xuất).
+                    # Kế hoạch sản xuất: TOÀN BỘ đơn còn tồn đọng cần sản xuất (Đặt Mới
+                    # trong kỳ + Tồn Lũy Kế Chuyển Sang - đúng logic "Tổng Cần Sản Xuất"
+                    # giống hệt các tab Gối Chậu/Khe Răng Lược...), gộp chung TẤT CẢ loại
+                    # sản phẩm rồi tách sản lượng ra theo từng loại để xem tổng quan.
                     q_col = 'So_Luong_Tong_DH'
-                    df_khsx = df_base[
-                        (df_base['Ngay_KD_Can_AC'] >= start_date) &
-                        (df_base['Ngay_KD_Can_AC'] <= end_date) &
-                        (~df_base['Da_Nhap_Kho'])
-                    ].copy()
-                    if tt_sel != 'Tất cả tình trạng':
-                        df_khsx = df_khsx[df_khsx['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+                    df_khsx = pd.concat([df_moi, df_ton]).copy()
  
                     cols_display = [
                         'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
@@ -816,7 +809,7 @@ def render_dashboard():
                     m5.metric("📋 Sản Phẩm Khác", f"{sl_khac:,.2f}")
                     m6.metric("🎯 Tổng Cộng", f"{sl_can_sx:,.2f}")
  
-                    st.caption(f"📋 Tổng số {so_don:,} đơn hàng cần sản xuất (KD Cần giao trong {ten_ky_hien_thi}, chưa nhập kho)")
+                    st.caption(f"📋 Tổng số {so_don:,} đơn hàng còn tồn đọng cần sản xuất (Đặt Mới {ten_ky_hien_thi} + Tồn Lũy Kế Chuyển Sang)")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
