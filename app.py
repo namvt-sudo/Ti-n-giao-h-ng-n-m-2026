@@ -3,13 +3,22 @@ import pandas as pd
 import io
 import re
 from datetime import datetime
-from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components
 
 # 1. CẤU HÌNH TRANG WEB & TỰ ĐỘNG REFRESH MỖI 10 GIÂY
 st.set_page_config(page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng", layout="wide", initial_sidebar_state="collapsed")
 
-# TỰ ĐỘNG LÀM MỚI TỪ GOOGLE SHEET SAU MỖI 10 GIÂY (10000 ms)
-st_autorefresh(interval=10000, key="vhip_auto_refresh")
+# TỰ ĐỘNG LÀM MỚI TỪ GOOGLE SHEET SAU MỖI 10 GIÂY (10000 ms) - KHÔNG CẦN CÀI MÀN BẢO LỖI MODULE
+components.html(
+    """
+    <script>
+        setTimeout(function(){
+            window.parent.location.reload();
+        }, 10000);
+    </script>
+    """,
+    height=0,
+)
 
 st.markdown("""
     <style>
