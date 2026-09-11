@@ -49,49 +49,62 @@ st.markdown("""
 
     /* ========================================================= */
     /* NỔI BẬT KHUNG VÀ CHỮ CHO DÃY TAB (GỐI CHẬU, KHE RĂNG LƯỢC...) */
+    /* CẬP NHẬT SELECTOR CHUẨN MỚI NHẤT CHO STREAMLIT               */
     /* ========================================================= */
     
-    /* Khoảng cách giữa các Tab */
-    div[data-baseweb="tab-list"] {
-        gap: 12px !important;
+    /* 1. Khoảng cách khung chứa danh sách Tab */
+    div[data-testid="stTabs"] div[role="tablist"] {
+        gap: 10px !important;
         border-bottom: 2px solid #cbd5e1 !important;
         padding-bottom: 8px !important;
     }
 
-    /* Trạng thái Tab THƯỜNG (Chưa chọn): Có khung rõ, chữ đậm, nền xám nhạt */
-    button[data-baseweb="tab"] {
-        background-color: #ffffff !important;
-        border: 2px solid #94a3b8 !important; /* Tạo khung rõ ràng */
-        border-radius: 8px !important;        /* Bo góc khung */
+    /* 2. Trạng thái Tab THƯỜNG (Chưa chọn): TẠO KHUNG ĐẬM, NỀN TRẮNG, CHỮ ĐEN ĐẬM */
+    div[data-testid="stTabs"] div[role="tablist"] button[role="tab"] {
+        background-color: #f8fafc !important;
+        border: 2px solid #64748b !important; /* Khung viền xám đậm rõ ràng */
+        border-radius: 8px !important;         /* Bo góc tròn đẹp mắt */
         padding: 8px 18px !important;
-        font-weight: 800 !important;          /* Làm chữ in đậm */
-        font-size: 15px !important;
-        color: #1e293b !important;            /* Màu chữ tối rõ nét */
-        box-shadow: 0 2px 4px rgba(0,0,0,0.06) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
         transition: all 0.2s ease-in-out !important;
     }
 
-    /* Hiệu ứng RÊ CHUỘT vào Tab */
-    button[data-baseweb="tab"]:hover {
-        border-color: #1976d2 !important;
-        color: #1976d2 !important;
-        background-color: #f0f7ff !important;
-        transform: translateY(-2px);
+    /* Định dạng chữ bên trong Tab thường */
+    div[data-testid="stTabs"] div[role="tablist"] button[role="tab"] p,
+    div[data-testid="stTabs"] div[role="tablist"] button[role="tab"] span {
+        color: #0f172a !important;            /* Màu chữ đen đậm nét */
+        font-weight: 800 !important;          /* Ép kiểu chữ In Đậm */
+        font-size: 15px !important;
     }
 
-    /* Trạng thái Tab ĐƯỢC CHỌN (Active): Nền xanh, chữ trắng nổi bật */
-    button[aria-selected="true"] {
-        background-color: #1565c0 !important;  /* Nền xanh đậm nổi bật */
-        border-color: #0d47a1 !important;
-        color: #ffffff !important;            /* Chữ màu trắng */
-        font-weight: 800 !important;
-        box-shadow: 0 4px 10px rgba(21, 101, 192, 0.35) !important;
+    /* 3. Hiệu ứng RÊ CHUỘT (Hover) vào Tab */
+    div[data-testid="stTabs"] div[role="tablist"] button[role="tab"]:hover {
+        border-color: #1d4ed8 !important;
+        background-color: #eff6ff !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    div[data-testid="stTabs"] div[role="tablist"] button[role="tab"]:hover p {
+        color: #1d4ed8 !important;
     }
 
-    /* Màu chữ hiển thị bên trong nút Tab */
-    button[aria-selected="true"] p, 
-    button[aria-selected="true"] span {
-        color: #ffffff !important;
+    /* 4. Trạng thái TAB ĐƯỢC CHỌN (Active): NỀN XANH NỔI BẬT, CHỮ TRẮNG IN ĐẬM */
+    div[data-testid="stTabs"] div[role="tablist"] button[aria-selected="true"] {
+        background-color: #1d4ed8 !important;  /* Nền xanh lam đậm nổi bật */
+        border: 2px solid #1e40af !important;  /* Viền xanh đậm */
+        box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4) !important;
+    }
+
+    /* Định dạng chữ màu trắng khi Tab được chọn */
+    div[data-testid="stTabs"] div[role="tablist"] button[aria-selected="true"] p,
+    div[data-testid="stTabs"] div[role="tablist"] button[aria-selected="true"] span {
+        color: #ffffff !important;            /* Chữ trắng nổi bật trên nền xanh */
+        font-weight: 900 !important;
+    }
+
+    /* Tắt vạch đỏ nhấp nháy mặc định bên dưới tab của Streamlit */
+    div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
+        background-color: transparent !important;
     }
 
     /* METRIC CARDS */
@@ -363,7 +376,7 @@ def render_dashboard():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # TAB DANH MỤC ĐÃ ĐƯỢC TẠO KHUNG VÀ LÀM NỔI BẬT
+        # TAB DANH MỤC CÓ KHUNG KHUNG BAO VÀ CHỮ IN ĐẬM RÕ NÉT
         tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
 
