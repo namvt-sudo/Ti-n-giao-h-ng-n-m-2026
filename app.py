@@ -21,6 +21,27 @@ st.markdown("""
  
     .main { padding: 1rem 1.2rem; }
  
+    /* ================= CHỐNG MỜ / NHÁY KHI st.fragment TỰ ĐỘNG RERUN =================
+       Streamlit gắn thuộc tính data-stale="true" lên các phần tử trong lúc fragment
+       đang chạy lại (run_every), mặc định sẽ giảm opacity gây cảm giác mờ/nháy.
+       Ép opacity luôn = 1 và tắt transition liên quan để tránh hiệu ứng này. */
+    [data-stale="true"],
+    [data-stale="true"] * ,
+    .main [data-stale="true"],
+    .main [data-stale="true"] * {
+        opacity: 1 !important;
+        transition: none !important;
+        animation: none !important;
+        filter: none !important;
+    }
+    /* Một số phiên bản Streamlit dùng class/style khác để đánh dấu stale */
+    div.stApp[style*="opacity"] {
+        opacity: 1 !important;
+    }
+    [class*="stAppViewContainer"] [style*="opacity: 0"] {
+        opacity: 1 !important;
+    }
+ 
     /* ================= TIÊU ĐỀ CHÍNH ================= */
     .main-title {
         background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
@@ -495,6 +516,9 @@ def load_data():
  
  
 # 3. DASHBOARD MAIN RENDER
+# Lưu ý: st.fragment(run_every=...) mặc định sẽ làm Streamlit gắn cờ "stale" lên
+# các phần tử trong lúc rerun, khiến chúng bị mờ đi trong chốc lát. Đoạn CSS
+# [data-stale="true"] ở trên đã ép opacity = 1 để loại bỏ hoàn toàn hiệu ứng này.
 @st.fragment(run_every=10)
 def render_dashboard():
     thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
