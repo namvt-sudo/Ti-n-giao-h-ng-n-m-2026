@@ -347,6 +347,34 @@ def get_ggs_export_url(url):
     gid = "984933238"
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
  
+ 
+# ============== ĐĂNG NHẬP DÙNG CHUNG 1 TÀI KHOẢN CHO TOÀN CÔNG TY ==============
+# Ưu tiên lấy từ Streamlit Secrets (mục [app_login]) để không lộ mật khẩu ngay
+# trong code; nếu chưa cấu hình Secrets thì dùng tạm giá trị mặc định bên dưới.
+_app_login_secrets = st.secrets.get("app_login", {}) if hasattr(st, "secrets") else {}
+TEN_DANG_NHAP_CHUNG = _app_login_secrets.get("username", "VHIP")
+MAT_KHAU_CHUNG = _app_login_secrets.get("password", "1")
+ 
+def man_hinh_dang_nhap():
+    st.markdown("""
+        <div style='text-align:center; margin-top:30px; margin-bottom:10px;'>
+            <div class="main-title" style="font-size:26px; display:inline-block;">🛡️ VHIP - ĐĂNG NHẬP HỆ THỐNG</div>
+        </div>
+    """, unsafe_allow_html=True)
+    col_l, col_mid, col_r = st.columns([1, 1.4, 1])
+    with col_mid:
+        with st.container(border=True):
+            st.caption("Nhập Tên đăng nhập và Mật khẩu chung của công ty để vào dashboard.")
+            ten = st.text_input("Tên đăng nhập", key="login_ten")
+            mk = st.text_input("Mật khẩu", type="password", key="login_mk")
+            if st.button("Đăng Nhập", use_container_width=True, key="btn_dangnhap"):
+                if ten.strip() == TEN_DANG_NHAP_CHUNG and mk == MAT_KHAU_CHUNG:
+                    st.session_state.logged_in = True
+                    st.rerun()
+                else:
+                    st.error("Sai tên đăng nhập hoặc mật khẩu.")
+# ================================================================================
+ 
 def clean_number(val):
     if pd.isna(val) or val is None:
         return 0.0
@@ -758,6 +786,23 @@ def render_dashboard():
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
  
-# CHẠY HÀM DASHBOARD
+# CHẠY DASHBOARD - CÓ CỔNG ĐĂNG NHẬP PHÍA TRƯỚC (1 tài khoản chung công ty)
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+ 
+if not st.session_state.logged_in:
+    man_hinh_dang_nhap()
+    st.stop()
+ 
+col_user, col_logout = st.columns([5, 1])
+with col_user:
+    st.markdown("👤 Đã đăng nhập")
+with col_logout:
+    if st.button("🚪 Đăng Xuất", use_container_width=True, key="btn_dangxuat"):
+        st.session_state.logged_in = False
+        st.rerun()
+ 
 render_dashboard()
  
+
+
