@@ -3,6 +3,7 @@ import pandas as pd
 import io
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
  
 # 1. CẤU HÌNH TRANG WEB & CSS GIAO DIỆN SINH ĐỘNG - CHUYÊN NGHIỆP
 import base64
@@ -480,7 +481,8 @@ def tinh_canh_bao_tien_do(row):
     if pd.isna(row['Ngay_Chot_AG']):
         return "⚠️ Thiếu Ngày Chốt AG"
  
-    ngay_hien_tai = pd.to_datetime('today').normalize()
+    # Quy đổi đúng giờ Việt Nam (server chạy UTC) để tính "còn bao nhiêu ngày" chính xác
+    ngay_hien_tai = pd.Timestamp.now(tz=ZoneInfo("Asia/Ho_Chi_Minh")).tz_localize(None).normalize()
     songay_con_lai = (row['Ngay_Chot_AG'] - ngay_hien_tai).days
  
     if songay_con_lai <= 5:
@@ -656,7 +658,9 @@ KHOANG_CACH_TU_DONG_GIAY = 180  # 3 phút/lần
  
 @st.fragment(run_every=KHOANG_CACH_TU_DONG_GIAY)
 def render_dashboard():
-    thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    # Máy chủ Streamlit Cloud chạy theo giờ UTC, nên phải quy đổi sang đúng giờ
+    # Việt Nam (UTC+7) để hiển thị "Cập nhật lúc" cho đúng thực tế.
+    thoi_gian_cap_nhat = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
  
     col_badge, col_refresh = st.columns([5, 1])
     with col_badge:
@@ -692,7 +696,7 @@ def render_dashboard():
                 if ky_sel == "Theo Tháng":
                     st.markdown('<div class="filter-chip-label">🗓️ Chọn Tháng</div>', unsafe_allow_html=True)
                     danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-                    thang_chon_str = st.selectbox("Chọn Tháng", danh_sach_thang, index=datetime.now().month - 1, label_visibility="collapsed")
+                    thang_chon_str = st.selectbox("Chọn Tháng", danh_sach_thang, index=datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).month - 1, label_visibility="collapsed")
                     thang_sel = int(thang_chon_str.replace("Tháng ", ""))
                 elif ky_sel == "Theo Quý":
                     st.markdown('<div class="filter-chip-label">📊 Chọn Quý</div>', unsafe_allow_html=True)
