@@ -910,20 +910,23 @@ def render_dashboard():
                     cho khớp đúng với tab Kế Hoạch Sản Xuất (tab đó cũng loại trừ tương tự)."""
                     return df_x[~df_x['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
  
-                # "Tồn Lũy Kế Chuyển Sang": CHỈ tính đơn tồn mà KD cần giao đúng trong kỳ
-                # đang chọn (Ngày KD Cần Giao Hàng nằm trong kỳ) - đơn nào cần giao ở
-                # kỳ khác (vd tháng sau) sẽ không tính vào đây nữa, để khớp đúng với
-                # tab Kế Hoạch Sản Xuất.
+                # "Tồn Lũy Kế Chuyển Sang": tính đơn tồn mà KD cần giao đúng trong kỳ đang
+                # chọn (Ngày KD Cần Giao Hàng nằm trong kỳ). Đơn nào THIẾU Ngày KD Cần
+                # (chưa điền) vẫn được tính vào đây (an toàn, không bỏ sót backlog thật) -
+                # chỉ đơn nào CÓ điền ngày rõ ràng nhưng rơi vào kỳ khác mới bị loại ra.
                 sub_ton_can_trong_ky = sub_ton[
-                    (sub_ton['Ngay_KD_Can_AC'] >= start_date) & (sub_ton['Ngay_KD_Can_AC'] <= end_date)
+                    sub_ton['Ngay_KD_Can_AC'].isna() |
+                    ((sub_ton['Ngay_KD_Can_AC'] >= start_date) & (sub_ton['Ngay_KD_Can_AC'] <= end_date))
                 ]
                 sub_ton = sub_ton_can_trong_ky  # từ đây trở đi, "Tồn" chỉ còn phần cần giao trong kỳ này
                 sl_ton_chuyen_sang = sub_ton[q_col].sum()
  
                 # Trong số Đặt Mới của kỳ này, phần nào KD cũng yêu cầu giao luôn trong
-                # kỳ này (vừa đặt vừa cần gấp trong cùng 1 kỳ).
+                # kỳ này (vừa đặt vừa cần gấp trong cùng 1 kỳ) - tương tự, đơn thiếu Ngày
+                # KD Cần vẫn được tính vào (an toàn, không bỏ sót).
                 sub_moi_can_trong_ky = sub_moi[
-                    (sub_moi['Ngay_KD_Can_AC'] >= start_date) & (sub_moi['Ngay_KD_Can_AC'] <= end_date)
+                    sub_moi['Ngay_KD_Can_AC'].isna() |
+                    ((sub_moi['Ngay_KD_Can_AC'] >= start_date) & (sub_moi['Ngay_KD_Can_AC'] <= end_date))
                 ]
                 sl_dat_moi_can_trong_ky = sub_moi_can_trong_ky[q_col].sum()
  
@@ -936,10 +939,19 @@ def render_dashboard():
                     + _khong_tam_dung(sub_ton)[q_col].sum()
                 )
                 sl_da_nhap_kho = sub_done[q_col].sum()
-                # "Còn Phải SX" không nên là số âm (âm nghĩa là đã SX/nhập kho vượt cả
-                # phần cần trong kỳ này - thường do nhập kho sớm/muộn từ kỳ khác) -
-                # nên chặn ở mức tối thiểu là 0 cho dễ hiểu, đúng bản chất "còn thiếu".
-                sl_con_lai = max(0, sl_tong_can_sx - sl_da_nhap_kho)
+ 
+                # "Còn Phải SX": TUYỆT ĐỐI KHÔNG lấy Tổng Cần SX trừ Tổng Nhập Kho theo
+                # kiểu gộp chung - vì nếu có đơn KHÁC đã nhập kho dư/sớm, phép trừ gộp sẽ
+                # "bù trừ" che mất những đơn thật sự vẫn còn tồn đọng, chưa sản xuất xong.
+                # Thay vào đó: cộng trực tiếp số lượng của TỪNG đơn hàng cụ thể (trong
+                # đúng phạm vi Tổng Cần SX ở trên) mà CHƯA nhập kho - đảm bảo đúng thực tế.
+                def _chua_nhap_kho(df_x):
+                    return df_x[~df_x['Da_Nhap_Kho']]
+ 
+                sl_con_lai = (
+                    _khong_tam_dung(_chua_nhap_kho(sub_moi_can_trong_ky))[q_col].sum()
+                    + _khong_tam_dung(_chua_nhap_kho(sub_ton))[q_col].sum()
+                )
  
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
