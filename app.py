@@ -944,18 +944,35 @@ def render_dashboard():
                 ]
  
                 sl_dat_moi = sub_moi[q_col].sum()
+ 
+                # "Tồn Lũy Kế Chuyển Sang": CHỈ tính đơn tồn mà KD cần giao đúng trong kỳ
+                # đang chọn (Ngày KD Cần Giao Hàng nằm trong kỳ) - đơn nào cần giao ở
+                # kỳ khác (vd tháng sau) sẽ không tính vào đây nữa, để khớp đúng với
+                # tab Kế Hoạch Sản Xuất.
+                sub_ton_can_trong_ky = sub_ton[
+                    (sub_ton['Ngay_KD_Can_AC'] >= start_date) & (sub_ton['Ngay_KD_Can_AC'] <= end_date)
+                ]
+                sub_ton = sub_ton_can_trong_ky  # từ đây trở đi, "Tồn" chỉ còn phần cần giao trong kỳ này
                 sl_ton_chuyen_sang = sub_ton[q_col].sum()
                 sl_tong_can_sx = sl_dat_moi + sl_ton_chuyen_sang
                 sl_da_nhap_kho = sub_done[q_col].sum()
                 sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
  
+                # Ô mới: trong số Đặt Mới của kỳ này, có bao nhiêu đơn KD cũng yêu cầu
+                # giao luôn trong kỳ này (vừa đặt vừa cần gấp trong cùng 1 kỳ).
+                sub_moi_can_trong_ky = sub_moi[
+                    (sub_moi['Ngay_KD_Can_AC'] >= start_date) & (sub_moi['Ngay_KD_Can_AC'] <= end_date)
+                ]
+                sl_dat_moi_can_trong_ky = sub_moi_can_trong_ky[q_col].sum()
+ 
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                m1, m2, m3, m4, m5 = st.columns(5)
+                m1, m2, m3, m4, m5, m6 = st.columns(6)
                 m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
                 m2.metric(f"⏳ Tồn Lũy Kế Chuyển Sang", f"{sl_ton_chuyen_sang:,.2f}")
                 m3.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
                 m4.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
                 m5.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
+                m6.metric(f"🔥 Đặt & Cần Giao {ten_ky_hien_thi}", f"{sl_dat_moi_can_trong_ky:,.2f}")
  
                 st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
@@ -988,7 +1005,7 @@ def render_dashboard():
                 # Số dòng được hiển thị riêng bằng st.caption() bên trong từng tab.
                 sub_tab1, sub_tab2, sub_tab3 = st.tabs([
                     "🆕 Đơn Đặt Mới",
-                    "⌛ Đơn Tồn Quá Khứ Chuyển Sang",
+                    "⌛ Đơn Tồn Cần Giao Trong Kỳ",
                     "✅ Đơn Đã Nhập Kho Trong Kỳ"
                 ])
  
@@ -1025,5 +1042,3 @@ with col_logout:
  
 render_dashboard()
  
-
-
