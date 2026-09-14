@@ -296,14 +296,14 @@ st.markdown("""
     div[data-testid="stMetricLabel"] {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 11.5px !important;
+        font-size: 13px !important;
         white-space: normal !important;
         overflow: visible !important;
         text-overflow: unset !important;
         line-height: 1.25 !important;
     }
     div[data-testid="stMetricLabel"] p {
-        font-size: 11.5px !important;
+        font-size: 13px !important;
         white-space: normal !important;
         overflow: visible !important;
         text-overflow: unset !important;
@@ -989,12 +989,13 @@ def render_dashboard():
                 sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
  
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                m1, m2, m3, m4, m5, m6 = st.columns(6)
-                m1.metric("📦 Đặt Mới", f"{sl_dat_moi:,.2f}")
-                m2.metric("🔥 Đặt & Cần Giao Ngay", f"{sl_dat_moi_can_trong_ky:,.2f}")
+                m1, m2, m3 = st.columns(3)
+                m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sl_dat_moi:,.2f}")
+                m2.metric(f"🔥 Đặt & Cần Giao {ten_ky_hien_thi}", f"{sl_dat_moi_can_trong_ky:,.2f}")
                 m3.metric(f"⏳ Tồn Lũy Kế Chuyển Sang", f"{sl_ton_chuyen_sang:,.2f}")
+                m4, m5, m6 = st.columns(3)
                 m4.metric("🎯 Tổng Cần Sản Xuất", f"{sl_tong_can_sx:,.2f}")
-                m5.metric("✅ Nhập Kho", f"{sl_da_nhap_kho:,.2f}")
+                m5.metric(f"✅ Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho:,.2f}")
                 m6.metric("⚠️ Còn Phải SX", f"{sl_con_lai:,.2f}")
  
                 st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
@@ -1065,5 +1066,3 @@ with col_logout:
  
 render_dashboard()
  
-
-
