@@ -483,6 +483,17 @@ def clean_status(val):
         return 'Chưa SX'
     return val_str
  
+def chuan_hoa_ten_nv(ten):
+    """Chuẩn hoá tên Nhân Viên KD để gom nhóm các cách ghi khác nhau của cùng
+    1 người (VD: 'Mr. Biên', 'Mr Biên', 'Biên' đều được coi là cùng 1 người
+    'Biên') - loại bỏ tiền tố xưng hô tiếng Anh phổ biến (Mr/Ms/Mrs)."""
+    if pd.isna(ten) or ten is None:
+        return ''
+    s = str(ten).strip()
+    s_new = re.sub(r'^(mr|ms|mrs)\.?\s*', '', s, flags=re.IGNORECASE).strip()
+    s_new = re.sub(r'\s+', ' ', s_new)
+    return s_new if s_new else s
+ 
 def tinh_canh_bao_tien_do(row):
     if row['Da_Nhap_Kho']:
         return "✅ Đã Hoàn Thành"
@@ -605,6 +616,7 @@ def load_data():
     df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026').astype(str).str.strip()
     df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].astype(str).str.strip().fillna('Chưa phân loại')
     df['NV_KD'] = df_raw.iloc[3:, 6].astype(str).str.strip().fillna('Chưa phân loại')
+    df['NV_KD_ChuanHoa'] = df['NV_KD'].apply(chuan_hoa_ten_nv)
     df['Du_An'] = df_raw.iloc[3:, 7].fillna('')
     df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')
     df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')
@@ -730,7 +742,7 @@ def render_dashboard():
             with col_nv:
                 st.markdown('<div class="filter-chip-label">👤 Nhân Viên KD</div>', unsafe_allow_html=True)
                 df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
-                nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
+                nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD_ChuanHoa'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
                 nv_sel = st.selectbox("Nhân Viên KD", nv_list, label_visibility="collapsed")
  
         df_base = df.copy()
@@ -738,7 +750,9 @@ def render_dashboard():
         if bp_sel != 'Tất cả bộ phận':
             df_base = df_base[df_base['Bo_Phan_KD'] == bp_sel]
         if nv_sel != 'Tất cả NVKD':
-            df_base = df_base[df_base['NV_KD'] == nv_sel]
+            # Lọc theo tên ĐÃ CHUẨN HOÁ, để gom đúng mọi cách ghi khác nhau của
+            # cùng 1 người (VD: 'Mr. Biên', 'Mr Biên', 'Biên' đều ra chung 1 kết quả).
+            df_base = df_base[df_base['NV_KD_ChuanHoa'] == nv_sel]
  
         nam_eff = 2026 if nam_sel == 'Tất cả các năm' else int(nam_sel)
  
