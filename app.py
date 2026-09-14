@@ -757,7 +757,13 @@ def render_dashboard():
  
             with f4:
                 st.markdown('<div class="filter-chip-label">🏭 Tình Trạng SX</div>', unsafe_allow_html=True)
-                tt_list = ['Tất cả tình trạng'] + sorted(list(df['Trang_Thai_SX'].unique()))
+                # Loại bỏ các giá trị rác/không phải trạng thái thực sự (VD: "VHIP" bị dính
+                # nhầm từ ô khác trong Google Sheet) ra khỏi danh sách lựa chọn.
+                gia_tri_rac_trang_thai = ['vhip']
+                tt_list = ['Tất cả tình trạng'] + sorted([
+                    x for x in df['Trang_Thai_SX'].unique()
+                    if str(x).strip().lower() not in gia_tri_rac_trang_thai
+                ])
                 tt_sel = st.selectbox("Tình Trạng SX", tt_list, label_visibility="collapsed")
  
             with f5:
@@ -1013,3 +1019,5 @@ with col_logout:
  
 render_dashboard()
  
+
+
