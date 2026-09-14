@@ -689,7 +689,7 @@ def render_dashboard():
  
             with f2:
                 st.markdown('<div class="filter-chip-label">⏱️ Kỳ Báo Cáo</div>', unsafe_allow_html=True)
-                ky_sel = st.selectbox("Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm"], label_visibility="collapsed")
+                ky_sel = st.selectbox("Kỳ Báo Cáo", ["Theo Tháng", "Theo Quý", "Cả Năm"], index=2, label_visibility="collapsed")
  
             with f3:
                 thang_sel, quy_sel = None, None
@@ -779,12 +779,24 @@ def render_dashboard():
         for i, tname in enumerate(tab_names):
             with tabs[i]:
                 if tname == '🗓️ Kế Hoạch Sản Xuất':
-                    # Kế hoạch sản xuất: TOÀN BỘ đơn còn tồn đọng cần sản xuất (Đặt Mới
-                    # trong kỳ + Tồn Lũy Kế Chuyển Sang - đúng logic "Tổng Cần Sản Xuất"
-                    # giống hệt các tab Gối Chậu/Khe Răng Lược...), gộp chung TẤT CẢ loại
-                    # sản phẩm rồi tách sản lượng ra theo từng loại để xem tổng quan.
                     q_col = 'So_Luong_Tong_DH'
-                    df_khsx = pd.concat([df_moi, df_ton]).copy()
+                    if ky_sel == "Cả Năm":
+                        # Chọn Cả Năm: hiện TOÀN BỘ đơn còn tồn đọng cần sản xuất (Đặt Mới
+                        # trong kỳ + Tồn Lũy Kế Chuyển Sang - đúng logic "Tổng Cần Sản Xuất"
+                        # giống hệt các tab Gối Chậu/Khe Răng Lược...), không phân biệt
+                        # Ngày KD Cần Giao Hàng là khi nào.
+                        df_khsx = pd.concat([df_moi, df_ton]).copy()
+                    else:
+                        # Chọn Theo Tháng / Theo Quý: chỉ lọc đúng những đơn có Ngày KD Cần
+                        # Giao Hàng rơi vào đúng tháng/quý đang chọn, chưa nhập kho.
+                        df_khsx = df_base[
+                            (df_base['Ngay_KD_Can_AC'] >= start_date) &
+                            (df_base['Ngay_KD_Can_AC'] <= end_date) &
+                            (~df_base['Da_Nhap_Kho'])
+                        ].copy()
+                        if tt_sel != 'Tất cả tình trạng':
+                            df_khsx = df_khsx[df_khsx['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+ 
                     # Loại bỏ đơn đang "Tạm dừng SX" ra khỏi kế hoạch - chỉ giữ đơn
                     # "Chưa sản xuất" và "Đang sản xuất" (áp dụng cả với tồn đầu kỳ).
                     df_khsx = df_khsx[~df_khsx['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
@@ -816,7 +828,10 @@ def render_dashboard():
                     m5.metric("📋 Sản Phẩm Khác", f"{sl_khac:,.2f}")
                     m6.metric("🎯 Tổng Cộng", f"{sl_can_sx:,.2f}")
  
-                    st.caption(f"📋 Tổng số {so_don:,} đơn hàng còn tồn đọng cần sản xuất (Đặt Mới {ten_ky_hien_thi} + Tồn Lũy Kế Chuyển Sang)")
+                    if ky_sel == "Cả Năm":
+                        st.caption(f"📋 Tổng số {so_don:,} đơn hàng còn tồn đọng cần sản xuất (Đặt Mới {ten_ky_hien_thi} + Tồn Lũy Kế Chuyển Sang)")
+                    else:
+                        st.caption(f"📋 Tổng số {so_don:,} đơn hàng KD yêu cầu giao hàng trong {ten_ky_hien_thi} (chưa nhập kho)")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
@@ -1010,3 +1025,5 @@ with col_logout:
  
 render_dashboard()
  
+
+
