@@ -954,16 +954,20 @@ def render_dashboard():
                 ]
                 sub_ton = sub_ton_can_trong_ky  # từ đây trở đi, "Tồn" chỉ còn phần cần giao trong kỳ này
                 sl_ton_chuyen_sang = sub_ton[q_col].sum()
-                sl_tong_can_sx = sl_dat_moi + sl_ton_chuyen_sang
-                sl_da_nhap_kho = sub_done[q_col].sum()
-                sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
  
-                # Ô mới: trong số Đặt Mới của kỳ này, có bao nhiêu đơn KD cũng yêu cầu
-                # giao luôn trong kỳ này (vừa đặt vừa cần gấp trong cùng 1 kỳ).
+                # Trong số Đặt Mới của kỳ này, phần nào KD cũng yêu cầu giao luôn trong
+                # kỳ này (vừa đặt vừa cần gấp trong cùng 1 kỳ).
                 sub_moi_can_trong_ky = sub_moi[
                     (sub_moi['Ngay_KD_Can_AC'] >= start_date) & (sub_moi['Ngay_KD_Can_AC'] <= end_date)
                 ]
                 sl_dat_moi_can_trong_ky = sub_moi_can_trong_ky[q_col].sum()
+ 
+                # "Tổng Cần Sản Xuất" = (Đặt Mới MÀ KD cũng cần giao trong kỳ) + (Tồn cần
+                # giao trong kỳ) - để khớp đúng với số bên tab Kế Hoạch Sản Xuất. Ô "Đặt
+                # Mới" phía trên vẫn hiện TOÀN BỘ đơn mới (không lọc) chỉ để tham khảo.
+                sl_tong_can_sx = sl_dat_moi_can_trong_ky + sl_ton_chuyen_sang
+                sl_da_nhap_kho = sub_done[q_col].sum()
+                sl_con_lai = sl_tong_can_sx - sl_da_nhap_kho
  
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                 m1, m2, m3, m4, m5, m6 = st.columns(6)
