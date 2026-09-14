@@ -944,13 +944,20 @@ def render_dashboard():
                 # kiểu gộp chung - vì nếu có đơn KHÁC đã nhập kho dư/sớm, phép trừ gộp sẽ
                 # "bù trừ" che mất những đơn thật sự vẫn còn tồn đọng, chưa sản xuất xong.
                 # Thay vào đó: cộng trực tiếp số lượng của TỪNG đơn hàng cụ thể (trong
-                # đúng phạm vi Tổng Cần SX ở trên) mà CHƯA nhập kho - đảm bảo đúng thực tế.
-                def _chua_nhap_kho(df_x):
-                    return df_x[~df_x['Da_Nhap_Kho']]
+                # đúng phạm vi Tổng Cần SX ở trên) mà CHƯA hoàn thành TÍNH ĐẾN CUỐI KỲ
+                # đang xem - đơn nào có Ngày Nhập Kho SAU kỳ này (hoặc đã đánh dấu xong
+                # nhưng chưa có ngày) vẫn tính là còn tồn đọng tại thời điểm kỳ đang xem.
+                def _con_ton_dong_den_cuoi_ky(df_x):
+                    da_xong_trong_ky = (
+                        df_x['Da_Nhap_Kho']
+                        & df_x['Ngay_NhapKho_DT'].notna()
+                        & (df_x['Ngay_NhapKho_DT'] <= end_date)
+                    )
+                    return df_x[~da_xong_trong_ky]
  
                 sl_con_lai = (
-                    _khong_tam_dung(_chua_nhap_kho(sub_moi_can_trong_ky))[q_col].sum()
-                    + _khong_tam_dung(_chua_nhap_kho(sub_ton))[q_col].sum()
+                    _khong_tam_dung(_con_ton_dong_den_cuoi_ky(sub_moi_can_trong_ky))[q_col].sum()
+                    + _khong_tam_dung(_con_ton_dong_den_cuoi_ky(sub_ton))[q_col].sum()
                 )
  
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
