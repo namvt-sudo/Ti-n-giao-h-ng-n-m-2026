@@ -921,7 +921,16 @@ def render_dashboard():
                 # Theo yêu cầu KD: khi chọn Tạm Dừng SX, hiện hẳn 1 bộ 4 chỉ số khác biệt
                 # (không dùng chung layout 6 ô bình thường) để dễ phân biệt: Số ĐH, Số
                 # Lượng Tạm Dừng trong kỳ, Lũy Kế Chuyển Sang, Tổng Số Lượng Chưa SX.
-                if 'tạm dừng' in str(tt_sel).lower():
+                if tt_sel != 'Tất cả tình trạng':
+                    # Giao diện RIÊNG áp dụng cho BẤT KỲ trạng thái cụ thể nào được chọn
+                    # (Đang SX, Tạm Dừng SX, Chưa SX, Done...) - không dùng chung layout
+                    # "Đặt Mới/Nhập Kho/Còn Phải SX" bình thường nữa, vì dễ gây hiểu nhầm
+                    # (VD: đơn "Đang SX" thì không thể có "Nhập Kho" nên phép trừ vô nghĩa).
+                    icon_map_trang_thai = {
+                        'tạm dừng': '⏸️', 'đang sx': '⚙️', 'chưa sx': '🕒', 'done': '✅'
+                    }
+                    icon_tt = next((v for k, v in icon_map_trang_thai.items() if k in tt_sel.lower()), '📌')
+ 
                     df_tamdung_view = pd.concat([sub_moi, sub_ton])
                     so_don_tamdung = len(df_tamdung_view)
                     sl_tamdung_thang = sub_moi[q_col].sum()
@@ -930,10 +939,10 @@ def render_dashboard():
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                     mt1, mt2, mt3, mt4 = st.columns(4)
-                    mt1.metric("📄 Số ĐH", f"{so_don_tamdung:,}")
-                    mt2.metric(f"⏸️ Số Lượng Tạm Dừng {ten_ky_hien_thi}", f"{sl_tamdung_thang:,.2f}")
+                    mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
+                    mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_tamdung_thang:,.2f}")
                     mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
-                    mt4.metric("📦 Tổng Số Lượng Chưa SX", f"{sl_chua_sx_tamdung:,.2f}")
+                    mt4.metric(f"📦 Tổng Số Lượng ({tt_sel})", f"{sl_chua_sx_tamdung:,.2f}")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
@@ -948,14 +957,14 @@ def render_dashboard():
                         st.write("")
                         st.write("")
                         excel_buf = io.BytesIO()
-                        sheet_name = re.sub(r'[\/\\\?\*\:\[\]]', '-', f"TamDung {ten_ky_hien_thi}")[:31]
+                        sheet_name = re.sub(r'[\/\\\?\*\:\[\]]', '-', f"{tt_sel} {ten_ky_hien_thi}")[:31]
                         with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
                             df_tamdung_show[cols_display].to_excel(writer, index=False, sheet_name=sheet_name)
                         tab_clean = tname.replace('📊 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
                         st.download_button(
-                            label=f"📥 Trích Excel Tạm Dừng ({tab_clean})",
+                            label=f"📥 Trích Excel {tt_sel} ({tab_clean})",
                             data=excel_buf.getvalue(),
-                            file_name=f"Tam_Dung_{tab_clean}_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
+                            file_name=f"{re.sub(r'[\/\\\?\*\:\[\]]', '-', tt_sel)}_{tab_clean}_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True,
                             key=f"btn_ex_{i}"
