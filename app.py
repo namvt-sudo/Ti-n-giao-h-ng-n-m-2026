@@ -821,9 +821,16 @@ def render_dashboard():
         df_ton_all_tt = df_ton.copy()
  
         if tt_sel != 'Tất cả tình trạng':
-            df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-            df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
-            df_done = df_done[df_done['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
+            # Riêng khi chọn "Đang SX": gộp cả đơn "Done" (đã nhập kho xong) vào cùng,
+            # vì cả 2 đều có nghĩa là "đã được đưa vào sản xuất" (khác với Tạm Dừng/Chưa
+            # SX là chưa động vào) - để cột Nhập Kho/Còn Lại bên dưới có ý nghĩa thực tế.
+            if tt_sel.lower() == 'đang sx':
+                mask_trang_thai = lambda df_x: df_x['Trang_Thai_SX'].str.lower().isin(['đang sx', 'done'])
+            else:
+                mask_trang_thai = lambda df_x: df_x['Trang_Thai_SX'].str.lower() == tt_sel.lower()
+            df_moi = df_moi[mask_trang_thai(df_moi)]
+            df_ton = df_ton[mask_trang_thai(df_ton)]
+            df_done = df_done[mask_trang_thai(df_done)]
  
         st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
@@ -957,21 +964,26 @@ def render_dashboard():
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                     st.caption(f"📊 Bối cảnh tổng thể {ten_ky_hien_thi} (không lọc trạng thái): Đặt Mới **{sl_dat_moi_tong:,.2f}** — Tạm Dừng SX **{sl_tam_dung_tong:,.2f}**")
-                    mt1, mt2, mt3 = st.columns(3)
-                    mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
-                    mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_moi_trong_tt:,.2f}")
-                    mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
  
                     if 'tạm dừng' in tt_sel.lower():
                         # Riêng Tạm Dừng SX: KHÔNG hiện Nhập Kho / Còn Lại (vô nghĩa với đơn
-                        # đang tạm dừng) - chỉ hiện thêm đúng 1 ô Tổng Số Lượng.
-                        mt4 = st.columns(1)[0]
+                        # đang tạm dừng) - gộp gọn thành 1 hàng 4 ô đều nhau cho cân đối.
+                        mt1, mt2, mt3, mt4 = st.columns(4)
+                        mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
+                        mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_moi_trong_tt:,.2f}")
+                        mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
                         mt4.metric(f"📦 {tt_sel} {ten_ky_hien_thi} (Tổng)", f"{sl_tong_trang_thai:,.2f}")
                     else:
+                        mt1, mt2, mt3 = st.columns(3)
+                        mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
+                        mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_moi_trong_tt:,.2f}")
+                        mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
                         mt4, mt5, mt6 = st.columns(3)
                         mt4.metric(f"📦 {tt_sel} {ten_ky_hien_thi} (Tổng)", f"{sl_tong_trang_thai:,.2f}")
                         mt5.metric(f"✅ Đã Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho_tt:,.2f}")
                         mt6.metric(f"🔧 Còn Lại Chưa Xong ({tt_sel})", f"{sl_con_lai_tt:,.2f}")
+                        if tt_sel.lower() == 'đang sx':
+                            st.caption("ℹ️ Số liệu \"Đang SX\" ở đây đã gộp cả các đơn \"Done\" (đã nhập kho xong) vào, vì cả 2 đều nghĩa là đã được đưa vào sản xuất - khác với Tạm Dừng SX hay Chưa SX là chưa động vào.")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
