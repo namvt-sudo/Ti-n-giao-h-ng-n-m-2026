@@ -957,12 +957,21 @@ def render_dashboard():
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                     st.caption(f"📊 Bối cảnh tổng thể {ten_ky_hien_thi} (không lọc trạng thái): Đặt Mới **{sl_dat_moi_tong:,.2f}** — Tạm Dừng SX **{sl_tam_dung_tong:,.2f}**")
-                    mt1, mt2, mt3, mt4, mt5 = st.columns(5)
+                    mt1, mt2, mt3 = st.columns(3)
                     mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
                     mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_moi_trong_tt:,.2f}")
                     mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
-                    mt4.metric(f"✅ Đã Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho_tt:,.2f}")
-                    mt5.metric(f"🔧 Còn Lại ({tt_sel})", f"{sl_con_lai_tt:,.2f}")
+ 
+                    if 'tạm dừng' in tt_sel.lower():
+                        # Riêng Tạm Dừng SX: KHÔNG hiện Nhập Kho / Còn Lại (vô nghĩa với đơn
+                        # đang tạm dừng) - chỉ hiện thêm đúng 1 ô Tổng Số Lượng.
+                        mt4 = st.columns(1)[0]
+                        mt4.metric(f"📦 {tt_sel} {ten_ky_hien_thi} (Tổng)", f"{sl_tong_trang_thai:,.2f}")
+                    else:
+                        mt4, mt5, mt6 = st.columns(3)
+                        mt4.metric(f"📦 {tt_sel} {ten_ky_hien_thi} (Tổng)", f"{sl_tong_trang_thai:,.2f}")
+                        mt5.metric(f"✅ Đã Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho_tt:,.2f}")
+                        mt6.metric(f"🔧 Còn Lại Chưa Xong ({tt_sel})", f"{sl_con_lai_tt:,.2f}")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
