@@ -963,7 +963,6 @@ def render_dashboard():
                     ])[q_col].sum()
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                    st.caption(f"📊 Bối cảnh tổng thể {ten_ky_hien_thi} (không lọc trạng thái): Đặt Mới **{sl_dat_moi_tong:,.2f}** — Tạm Dừng SX **{sl_tam_dung_tong:,.2f}**")
  
                     if 'tạm dừng' in tt_sel.lower():
                         # Riêng Tạm Dừng SX: KHÔNG hiện Nhập Kho / Còn Lại (vô nghĩa với đơn
@@ -988,9 +987,11 @@ def render_dashboard():
                     col_search, col_export = st.columns([3, 1])
                     with col_search:
                         search_kw = st.text_input("🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
-                    df_tamdung_show = df_tamdung_view
+                    sub_moi_show, sub_ton_show, sub_done_show = sub_moi, sub_ton, sub_done
                     if search_kw:
-                        df_tamdung_show = df_tamdung_show[df_tamdung_show['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                        sub_moi_show = sub_moi_show[sub_moi_show['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                        sub_ton_show = sub_ton_show[sub_ton_show['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                        sub_done_show = sub_done_show[sub_done_show['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
  
                     with col_export:
                         st.write("")
@@ -998,7 +999,7 @@ def render_dashboard():
                         excel_buf = io.BytesIO()
                         sheet_name = re.sub(r'[\/\\\?\*\:\[\]]', '-', f"{tt_sel} {ten_ky_hien_thi}")[:31]
                         with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
-                            df_tamdung_show[cols_display].to_excel(writer, index=False, sheet_name=sheet_name)
+                            pd.concat([sub_moi_show, sub_ton_show, sub_done_show])[cols_display].to_excel(writer, index=False, sheet_name=sheet_name)
                         tab_clean = tname.replace('📊 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
                         st.download_button(
                             label=f"📥 Trích Excel {tt_sel} ({tab_clean})",
@@ -1009,8 +1010,20 @@ def render_dashboard():
                             key=f"btn_ex_{i}"
                         )
  
-                    st.caption(f"📄 {len(df_tamdung_show)} dòng")
-                    render_pretty_table(df_tamdung_show, cols_display, q_col, f"tamdung_{i}")
+                    sub_tab_a, sub_tab_b, sub_tab_c = st.tabs([
+                        "🆕 Đơn Đặt Mới",
+                        "⌛ Đơn Tồn Cần Giao Trong Kỳ",
+                        "✅ Đơn Đã Nhập Kho Trong Kỳ"
+                    ])
+                    with sub_tab_a:
+                        st.caption(f"📄 {len(sub_moi_show)} dòng")
+                        render_pretty_table(sub_moi_show, cols_display, q_col, f"tamdung_moi_{i}")
+                    with sub_tab_b:
+                        st.caption(f"📄 {len(sub_ton_show)} dòng")
+                        render_pretty_table(sub_ton_show, cols_display, q_col, f"tamdung_ton_{i}")
+                    with sub_tab_c:
+                        st.caption(f"📄 {len(sub_done_show)} dòng")
+                        render_pretty_table(sub_done_show, cols_display, q_col, f"tamdung_done_{i}")
  
                     continue
                 # ==================================================================================
@@ -1150,3 +1163,5 @@ with col_logout:
  
 render_dashboard()
  
+
+
