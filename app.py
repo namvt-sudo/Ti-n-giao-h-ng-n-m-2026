@@ -822,7 +822,7 @@ def render_dashboard():
         st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
         # TAB DANH MỤC
-        tab_names = ['📊 Dashboard Tổng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
+        tab_names = ['📊 Dashboard Tổng', '🚨 Chưa Chốt Tiến Độ Giao Hàng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
         tabs = st.tabs(tab_names)
  
         qty_mapping = {
@@ -835,6 +835,70 @@ def render_dashboard():
  
         for i, tname in enumerate(tab_names):
             with tabs[i]:
+                if tname == '🚨 Chưa Chốt Tiến Độ Giao Hàng':
+                    # Hiện các đơn còn THIẾU Ngày Chốt Tiến Độ Giao Hàng VHIP-KD (cột AG),
+                    # gộp chung tất cả loại sản phẩm, tách sản lượng theo từng loại để
+                    # tiện theo dõi tổng quan (giống cấu trúc tab Kế Hoạch SX trước đây).
+                    q_col = 'So_Luong_Tong_DH'
+                    df_chua_chot = pd.concat([df_moi, df_ton])
+                    df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
+ 
+                    cols_display = [
+                        'So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col,
+                        'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC',
+                        'Ngay_Chot_AG', 'Ngay_NhapKho_DT'
+                    ]
+ 
+                    so_don_chua_chot = len(df_chua_chot)
+                    sl_goi_chau = df_chua_chot['SL_GoiChau'].sum()
+                    sl_khe_rang_luoc = df_chua_chot['SL_KheRangLuoc'].sum()
+                    sl_tam_vco = df_chua_chot['SL_TamVCO'].sum()
+                    sl_cot_h = df_chua_chot['SL_HeCotPhuKien'].sum()
+                    sl_khac = df_chua_chot['SL_NhomKhac'].sum()
+                    sl_tong = df_chua_chot[q_col].sum()
+ 
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    mc0, mc1, mc2, mc3 = st.columns(4)
+                    mc0.metric("📄 Số ĐH Chưa Chốt", f"{so_don_chua_chot:,}")
+                    mc1.metric("📦 Gối Chậu", f"{sl_goi_chau:,.2f}")
+                    mc2.metric("⚙️ Khe Răng Lược", f"{sl_khe_rang_luoc:,.2f}")
+                    mc3.metric("🧱 Tấm VCO", f"{sl_tam_vco:,.2f}")
+                    mc4, mc5, mc6 = st.columns(3)
+                    mc4.metric("🏗️ Cột H (Phụ Kiện)", f"{sl_cot_h:,.2f}")
+                    mc5.metric("📋 Sản Phẩm Khác", f"{sl_khac:,.2f}")
+                    mc6.metric("🎯 Tổng Cộng", f"{sl_tong:,.2f}")
+ 
+                    st.caption("📋 Các đơn hàng còn thiếu Ngày Chốt Tiến Độ Giao Hàng VHIP-KD (cột AG) - cần bổ sung để lên kế hoạch sản xuất chính xác.")
+ 
+                    st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
+ 
+                    col_search, col_export = st.columns([3, 1])
+                    with col_search:
+                        search_kw = st.text_input("🔍 Tìm kiếm nhanh (Mã ĐH, Dự án, Quy cách...):", key=f"s_{i}")
+                    df_chua_chot_show = df_chua_chot
+                    if search_kw:
+                        df_chua_chot_show = df_chua_chot_show[df_chua_chot_show['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+ 
+                    with col_export:
+                        st.write("")
+                        st.write("")
+                        excel_buf = io.BytesIO()
+                        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+                            df_chua_chot_show[cols_display].to_excel(writer, index=False, sheet_name="Chua Chot Tien Do")
+                        st.download_button(
+                            label="📥 Trích Excel (Chưa Chốt Tiến Độ)",
+                            data=excel_buf.getvalue(),
+                            file_name="Chua_Chot_Tien_Do_Giao_Hang.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key=f"btn_ex_{i}"
+                        )
+ 
+                    st.caption(f"📄 {len(df_chua_chot_show)} dòng")
+                    render_pretty_table(df_chua_chot_show, cols_display, q_col, f"chuachot_{i}")
+ 
+                    continue
+ 
                 if tname == '📊 Dashboard Tổng':
                     q_col = 'So_Luong_Tong_DH'
                     sub_moi, sub_ton, sub_done = df_moi.copy(), df_ton.copy(), df_done.copy()
@@ -1038,5 +1102,3 @@ with col_logout:
  
 render_dashboard()
  
-
-
