@@ -814,6 +814,12 @@ def render_dashboard():
         cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
         df_done = df_base[cond_nhap_kho_trong_ky].copy()
  
+        # Giữ lại bản KHÔNG lọc theo Tình Trạng SX (trước khi áp dụng tt_sel) để dùng
+        # cho phần "bối cảnh tổng thể" (Đặt Mới tổng, Tạm Dừng tổng...) hiển thị kèm
+        # trong màn hình chi tiết theo từng trạng thái bên dưới.
+        df_moi_all_tt = df_moi.copy()
+        df_ton_all_tt = df_ton.copy()
+ 
         if tt_sel != 'Tất cả tình trạng':
             df_moi = df_moi[df_moi['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
             df_ton = df_ton[df_ton['Trang_Thai_SX'].str.lower() == tt_sel.lower()]
@@ -902,11 +908,14 @@ def render_dashboard():
                 if tname == '📊 Dashboard Tổng':
                     q_col = 'So_Luong_Tong_DH'
                     sub_moi, sub_ton, sub_done = df_moi.copy(), df_ton.copy(), df_done.copy()
+                    sub_moi_all_tt, sub_ton_all_tt = df_moi_all_tt.copy(), df_ton_all_tt.copy()
                 else:
                     q_col = qty_mapping[tname]
                     sub_moi = df_moi[df_moi[q_col] > 0].copy()
                     sub_ton = df_ton[df_ton[q_col] > 0].copy()
                     sub_done = df_done[df_done[q_col] > 0].copy()
+                    sub_moi_all_tt = df_moi_all_tt[df_moi_all_tt[q_col] > 0].copy()
+                    sub_ton_all_tt = df_ton_all_tt[df_ton_all_tt[q_col] > 0].copy()
  
                 # Thứ tự cột hiển thị: Mã ĐH -> Bộ Phận -> NVKD -> Dự Án -> Quy Cách -> ĐVT ->
                 # Số Lượng -> Cảnh Báo Tiến Độ -> Trạng Thái -> Duyệt Base SX ->
@@ -923,9 +932,9 @@ def render_dashboard():
                 # Lượng Tạm Dừng trong kỳ, Lũy Kế Chuyển Sang, Tổng Số Lượng Chưa SX.
                 if tt_sel != 'Tất cả tình trạng':
                     # Giao diện RIÊNG áp dụng cho BẤT KỲ trạng thái cụ thể nào được chọn
-                    # (Đang SX, Tạm Dừng SX, Chưa SX, Done...) - không dùng chung layout
-                    # "Đặt Mới/Nhập Kho/Còn Phải SX" bình thường nữa, vì dễ gây hiểu nhầm
-                    # (VD: đơn "Đang SX" thì không thể có "Nhập Kho" nên phép trừ vô nghĩa).
+                    # (Đang SX, Tạm Dừng SX, Chưa SX, Done...) - LUÔN hiện kèm bối cảnh
+                    # tổng thể (Đặt Mới tổng, Tạm Dừng tổng) để không phải đổi qua đổi lại
+                    # bộ lọc mới hiểu được toàn bộ bức tranh.
                     icon_map_trang_thai = {
                         'tạm dừng': '⏸️', 'đang sx': '⚙️', 'chưa sx': '🕒', 'done': '✅'
                     }
@@ -933,16 +942,27 @@ def render_dashboard():
  
                     df_tamdung_view = pd.concat([sub_moi, sub_ton])
                     so_don_tamdung = len(df_tamdung_view)
-                    sl_tamdung_thang = sub_moi[q_col].sum()
-                    sl_luy_ke_tamdung = sub_ton[q_col].sum()
-                    sl_chua_sx_tamdung = sl_tamdung_thang + sl_luy_ke_tamdung
+                    sl_moi_trong_tt = sub_moi[q_col].sum()       # đặt mới trong kỳ, thuộc đúng trạng thái đang chọn
+                    sl_luy_ke_tamdung = sub_ton[q_col].sum()      # tồn từ trước, thuộc đúng trạng thái đang chọn
+                    sl_tong_trang_thai = sl_moi_trong_tt + sl_luy_ke_tamdung   # tổng số lượng thuộc trạng thái đang chọn
+                    sl_da_nhap_kho_tt = sub_done[q_col].sum()     # trong số đó, phần đã thực sự nhập kho trong kỳ
+                    sl_con_lai_tt = max(0, sl_tong_trang_thai - sl_da_nhap_kho_tt)  # phần thực sự còn phải làm
+ 
+                    # Bối cảnh tổng thể - KHÔNG lọc theo trạng thái, để so sánh đối chiếu
+                    sl_dat_moi_tong = sub_moi_all_tt[q_col].sum()
+                    sl_tam_dung_tong = pd.concat([
+                        sub_moi_all_tt[sub_moi_all_tt['Trang_Thai_SX'].str.lower().str.contains('tạm dừng', na=False)],
+                        sub_ton_all_tt[sub_ton_all_tt['Trang_Thai_SX'].str.lower().str.contains('tạm dừng', na=False)]
+                    ])[q_col].sum()
  
                     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                    mt1, mt2, mt3, mt4 = st.columns(4)
+                    st.caption(f"📊 Bối cảnh tổng thể {ten_ky_hien_thi} (không lọc trạng thái): Đặt Mới **{sl_dat_moi_tong:,.2f}** — Tạm Dừng SX **{sl_tam_dung_tong:,.2f}**")
+                    mt1, mt2, mt3, mt4, mt5 = st.columns(5)
                     mt1.metric(f"📄 Số ĐH ({tt_sel})", f"{so_don_tamdung:,}")
-                    mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_tamdung_thang:,.2f}")
+                    mt2.metric(f"{icon_tt} Số Lượng Mới {ten_ky_hien_thi}", f"{sl_moi_trong_tt:,.2f}")
                     mt3.metric("⏳ Lũy Kế Chuyển Sang", f"{sl_luy_ke_tamdung:,.2f}")
-                    mt4.metric(f"📦 Tổng Số Lượng ({tt_sel})", f"{sl_chua_sx_tamdung:,.2f}")
+                    mt4.metric(f"✅ Đã Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho_tt:,.2f}")
+                    mt5.metric(f"🔧 Còn Lại ({tt_sel})", f"{sl_con_lai_tt:,.2f}")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
