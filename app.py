@@ -982,8 +982,6 @@ def render_dashboard():
                         mt4.metric(f"📦 {tt_sel} {ten_ky_hien_thi} (Tổng)", f"{sl_tong_trang_thai:,.2f}")
                         mt5.metric(f"✅ Đã Nhập Kho {ten_ky_hien_thi}", f"{sl_da_nhap_kho_tt:,.2f}")
                         mt6.metric(f"🔧 Còn Lại Chưa Xong ({tt_sel})", f"{sl_con_lai_tt:,.2f}")
-                        if tt_sel.lower() == 'đang sx':
-                            st.caption("ℹ️ Số liệu \"Đang SX\" ở đây đã gộp cả các đơn \"Done\" (đã nhập kho xong) vào, vì cả 2 đều nghĩa là đã được đưa vào sản xuất - khác với Tạm Dừng SX hay Chưa SX là chưa động vào.")
  
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
  
