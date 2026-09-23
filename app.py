@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 # 1. CẤU HÌNH TRANG WEB & CSS
 st.set_page_config(
     page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -20,7 +21,7 @@ st.markdown("""
         font-family: 'Be Vietnam Pro', sans-serif !important;
     }
 
-    /* ẨN TOÀN BỘ THANH HEADER (NÚT FORK, GITHUB, MENU 3 CHẤM) */
+    /* ẨN TOÀN BỘ THANH HEADER */
     header[data-testid="stHeader"],
     #MainMenu,
     .stAppDeployButton,
@@ -46,6 +47,7 @@ st.markdown("""
         filter: none !important;
     }
 
+    /* TIÊU ĐỀ CHÍNH */
     .main-title {
         background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
         -webkit-background-clip: text;
@@ -73,6 +75,7 @@ st.markdown("""
         margin-bottom: 10px;
     }
 
+    /* KHỐI BỘ LỌC */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
         border: 1.5px solid #bcd6ff !important;
@@ -128,6 +131,7 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
+    /* TAB DANH MỤC */
     div[data-testid="stTabs"] [role="tablist"],
     div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
         gap: 10px !important;
@@ -175,6 +179,7 @@ st.markdown("""
         display: none !important;
     }
 
+    /* METRIC CARDS */
     div[data-testid="stMetric"] {
         background: linear-gradient(145deg, #ffffff 0%, #e3f2fd 60%, #d0ebff 100%);
         padding: 14px 16px;
@@ -193,6 +198,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
+    /* BẢNG DỮ LIỆU */
     .table-wrap {
         max-height: 480px;
         overflow: auto;
@@ -238,8 +244,42 @@ st.markdown("""
     .table-wrap tbody tr:nth-child(even) td {
         background-color: #f4f8ff;
     }
+    .table-wrap tbody tr:hover td {
+        background-color: #e3f0ff !important;
+        transition: background-color 0.15s ease-in-out;
+    }
     .table-wrap tbody th {
         display: none;
+    }
+
+    /* ================= CỐ ĐỊNH & THU GỌN CỘT DỰ ÁN & QUY CÁCH ================= */
+    .table-wrap tbody td:nth-child(4),
+    .table-wrap tbody td:nth-child(5) {
+        max-width: 190px !important;
+        min-width: 140px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        cursor: pointer !important;
+        position: relative;
+    }
+
+    /* KHI RÊ CHUỘT / BẤM VÀO: BUNG CHỮ ĐẦY ĐỦ DẠNG POPUP NỔI */
+    .table-wrap tbody td:nth-child(4):hover,
+    .table-wrap tbody td:nth-child(5):hover,
+    .table-wrap tbody td:nth-child(4):active,
+    .table-wrap tbody td:nth-child(5):active {
+        max-width: none !important;
+        overflow: visible !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        position: relative !important;
+        z-index: 99 !important;
+        background-color: #fff9c4 !important;
+        color: #0d47a1 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25) !important;
+        border-radius: 6px !important;
     }
 
     div[data-testid="stDownloadButton"] button {
@@ -671,7 +711,7 @@ def render_dashboard():
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
 
-# ĐĂNG NHẬP
+# 4. ĐĂNG NHẬP
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
