@@ -35,7 +35,7 @@ st.markdown("""
         background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%);
     }
 
-    .main { padding: 1rem 1.2rem; }
+    .main { padding: 0.8rem 1.2rem; }
 
     [data-stale="true"],
     [data-stale="true"] *,
@@ -53,12 +53,12 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: 0.6px;
         margin-bottom: 4px;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
         border-bottom: 4px solid transparent;
         border-image: linear-gradient(90deg, #0d47a1, #00b4d8, #90e0ef) 1;
     }
@@ -72,24 +72,24 @@ st.markdown("""
         padding: 4px 14px;
         border-radius: 20px;
         box-shadow: 0 3px 8px rgba(30,136,229,0.35);
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     /* KHỐI BỘ LỌC */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
         border: 1.5px solid #bcd6ff !important;
-        border-radius: 16px !important;
-        box-shadow: 0 6px 18px rgba(13,71,161,0.10) !important;
-        padding: 6px 4px !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 14px rgba(13,71,161,0.08) !important;
+        padding: 8px 12px !important;
     }
 
     .sub-title-clean {
         color: #0d47a1;
-        font-size: 21px;
+        font-size: 18px;
         font-weight: 800;
-        margin-top: 4px;
-        margin-bottom: 14px;
+        margin-top: 2px;
+        margin-bottom: 10px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -101,19 +101,19 @@ st.markdown("""
         border: 1px solid #b9d4ff;
         border-left: 4px solid #1565c0;
         border-radius: 8px;
-        padding: 5px 12px;
-        margin-bottom: 6px;
+        padding: 4px 8px;
+        margin-bottom: 5px;
         color: #0d47a1;
         font-weight: 800;
-        font-size: 14.5px;
-        box-shadow: 0 2px 6px rgba(13,71,161,0.08);
+        font-size: 13px;
+        box-shadow: 0 2px 6px rgba(13,71,161,0.06);
     }
 
     div[data-testid="stWidgetLabel"] label,
     div[data-testid="stWidgetLabel"] p {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 14.5px !important;
+        font-size: 13px !important;
         opacity: 1 !important;
     }
 
@@ -125,18 +125,25 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important;
     }
 
-    div[data-testid="stTextInput"] input {
-        border-radius: 10px !important;
+    /* THU GỌN VÀ LÀM ĐẸP Ô TÌM KIẾM */
+    .search-input-wrap div[data-testid="stTextInput"] {
+        max-width: 320px !important;
+    }
+    .search-input-wrap div[data-testid="stTextInput"] input {
+        border-radius: 20px !important;
         border: 1.5px solid #93b8f2 !important;
-        font-weight: 500 !important;
+        padding-left: 14px !important;
+        font-size: 13.5px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(13,71,161,0.06) !important;
     }
 
     /* TAB DANH MỤC */
     div[data-testid="stTabs"] [role="tablist"],
     div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
-        gap: 10px !important;
+        gap: 8px !important;
         border-bottom: none !important;
-        padding: 6px 6px 14px 6px !important;
+        padding: 4px 6px 12px 6px !important;
         background: transparent !important;
         flex-wrap: wrap !important;
     }
@@ -146,9 +153,9 @@ st.markdown("""
         background: linear-gradient(135deg, #ffffff, #f2f7ff) !important;
         border: 2px solid #93b8f2 !important;
         border-radius: 12px !important;
-        padding: 10px 20px !important;
-        box-shadow: 0 3px 8px rgba(13,71,161,0.10) !important;
-        transition: all 0.22s ease-in-out !important;
+        padding: 8px 16px !important;
+        box-shadow: 0 3px 8px rgba(13,71,161,0.08) !important;
+        transition: all 0.2s ease-in-out !important;
     }
 
     div[data-testid="stTabs"] [role="tab"] p,
@@ -156,13 +163,13 @@ st.markdown("""
     div[data-testid="stTabs"] [role="tab"] div {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
     }
 
     div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
         background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8) !important;
         border: 2px solid #0d47a1 !important;
-        box-shadow: 0 6px 16px rgba(13,71,161,0.45) !important;
+        box-shadow: 0 6px 16px rgba(13,71,161,0.40) !important;
         transform: translateY(-2px) !important;
     }
 
@@ -179,23 +186,42 @@ st.markdown("""
         display: none !important;
     }
 
-    /* METRIC CARDS */
+    /* ================= THU GỌN METRIC CARDS (CHỐNG DƯ KHOẢNG TRẮNG) ================= */
     div[data-testid="stMetric"] {
-        background: linear-gradient(145deg, #ffffff 0%, #e3f2fd 60%, #d0ebff 100%);
-        padding: 14px 16px;
-        border-radius: 14px;
-        border-left: 6px solid #1976d2;
-        box-shadow: 0 4px 12px rgba(13,71,161,0.14);
+        background: linear-gradient(145deg, #ffffff 0%, #e8f4fd 60%, #d6edff 100%);
+        padding: 8px 12px !important;
+        border-radius: 12px !important;
+        border-left: 5px solid #1976d2 !important;
+        box-shadow: 0 3px 10px rgba(13,71,161,0.12) !important;
+        text-align: center !important;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(13,71,161,0.20) !important;
     }
     div[data-testid="stMetricLabel"] {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 13px !important;
+        font-size: 12.5px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        justify-content: center !important;
+    }
+    div[data-testid="stMetricLabel"] p {
+        font-size: 12.5px !important;
+        text-align: center !important;
+        margin-bottom: 2px !important;
     }
     div[data-testid="stMetricValue"] {
         color: #0b3d91 !important;
         font-weight: 900 !important;
-        font-size: 26px !important;
+        font-size: 21px !important;
+        justify-content: center !important;
+    }
+    div[data-testid="stMetricValue"] div {
+        text-align: center !important;
+        width: 100% !important;
     }
 
     /* BẢNG DỮ LIỆU */
@@ -229,7 +255,7 @@ st.markdown("""
         background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1) !important;
         color: #ffffff !important;
         font-weight: 800 !important;
-        font-size: 14px !important;
+        font-size: 13.5px !important;
         text-align: center !important;
         padding: 10px 12px !important;
         border-bottom: 2px solid #08306b !important;
@@ -264,7 +290,7 @@ st.markdown("""
         position: relative;
     }
 
-    /* KHI RÊ CHUỘT / BẤM VÀO: BUNG CHỮ ĐẦY ĐỦ DẠNG POPUP NỔI */
+    /* BUNG CHỮ ĐẦY ĐỦ KHI HOVER / CLICK */
     .table-wrap tbody td:nth-child(4):hover,
     .table-wrap tbody td:nth-child(5):hover,
     .table-wrap tbody td:nth-child(4):active,
@@ -282,19 +308,27 @@ st.markdown("""
         border-radius: 6px !important;
     }
 
+    /* NÚT TẢI EXCEL */
     div[data-testid="stDownloadButton"] button {
         background: linear-gradient(90deg, #0d47a1, #00b4d8) !important;
         color: #ffffff !important;
         font-weight: 800 !important;
-        border-radius: 10px !important;
+        border-radius: 20px !important;
         border: none !important;
-        box-shadow: 0 4px 12px rgba(13,71,161,0.30) !important;
+        font-size: 13.5px !important;
+        padding: 6px 16px !important;
+        box-shadow: 0 4px 12px rgba(13,71,161,0.25) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,180,216,0.40) !important;
     }
 
     .soft-divider {
         height: 1px;
         background: linear-gradient(90deg, transparent, #b9d4ff, transparent);
-        margin: 14px 0 18px 0;
+        margin: 12px 0 14px 0;
         border: none;
     }
     </style>
@@ -466,13 +500,17 @@ def render_pretty_table(df_show, cols, q_col, table_key):
     else:
         st.markdown(f'<div class="table-wrap">{styler.to_html()}</div>', unsafe_allow_html=True)
 
-def convert_df_to_excel(df_moi, df_ton, df_done, cols, label_ky):
+def convert_df_to_excel_by_product(df_moi, df_ton, df_done, cols, ten_ky, ten_san_pham):
     output = io.BytesIO()
-    clean_label = re.sub(r'[\/\\\?\*\:\[\]]', '-', str(label_ky))
+    clean_sp = re.sub(r'[\/\\\?\*\:\[\]]', '-', str(ten_san_pham)).strip()
+    sheet_moi = f"Đặt mới {clean_sp}"[:31]
+    sheet_ton = f"Tồn {clean_sp}"[:31]
+    sheet_done = f"Nhập kho {clean_sp}"[:31]
+
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_moi[cols].to_excel(writer, index=False, sheet_name=f"Dat Moi {clean_label}"[:31])
-        df_ton[cols].to_excel(writer, index=False, sheet_name=f"Ton Truoc {clean_label}"[:31])
-        df_done[cols].to_excel(writer, index=False, sheet_name=f"Da Nhap Kho {clean_label}"[:31])
+        df_moi[cols].to_excel(writer, index=False, sheet_name=sheet_moi)
+        df_ton[cols].to_excel(writer, index=False, sheet_name=sheet_ton)
+        df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
     return output.getvalue()
 
 @st.cache_data(ttl=180, show_spinner=False)
@@ -549,12 +587,13 @@ def render_dashboard():
 
     try:
         df = load_data()
+
         with st.container(border=True):
             st.markdown('<div class="sub-title-clean">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>', unsafe_allow_html=True)
-            f1, f2, f3, f4, f5 = st.columns(5)
+            f1, f2, f3, f4, f5, f6 = st.columns(6)
 
             with f1:
-                st.markdown('<div class="filter-chip-label">📅 Chọn Năm Báo Cáo</div>', unsafe_allow_html=True)
+                st.markdown('<div class="filter-chip-label">📅 Chọn Năm</div>', unsafe_allow_html=True)
                 nam_list = ['Tất cả các năm'] + sorted(list(df['Nam_DatHang'].unique()))
                 nam_sel = st.selectbox("Năm", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0, label_visibility="collapsed")
 
@@ -587,8 +626,7 @@ def render_dashboard():
                 bp_list = ['Tất cả bộ phận'] + sorted([x for x in df['Bo_Phan_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
                 bp_sel = st.selectbox("Bộ phận", bp_list, label_visibility="collapsed")
 
-            col_nv, _ = st.columns([2, 3])
-            with col_nv:
+            with f6:
                 st.markdown('<div class="filter-chip-label">👤 Nhân Viên KD</div>', unsafe_allow_html=True)
                 df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
                 nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD_ChuanHoa'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
@@ -643,25 +681,47 @@ def render_dashboard():
 
         for i, tname in enumerate(tab_names):
             with tabs[i]:
+                ten_sp_thuan = tname.replace('📊 ', '').replace('🚨 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
+
                 if tname == '🚨 Chưa Chốt Tiến Độ Giao Hàng':
                     q_col = 'So_Luong_Tong_DH'
                     df_chua_chot = pd.concat([df_moi, df_ton])
                     df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
                     cols_display = ['So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col, 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']
 
-                    mc0, mc1, mc2, mc3 = st.columns(4)
-                    mc0.metric("📄 Số ĐH Chưa Chốt", f"{len(df_chua_chot):,}")
+                    # THU GỌN VỀ 1 HÀNG 7 Ô CÂN XỨNG
+                    mc0, mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(7)
+                    mc0.metric("📄 ĐH Chưa Chốt", f"{len(df_chua_chot):,}")
                     mc1.metric("📦 Gối Chậu", f"{df_chua_chot['SL_GoiChau'].sum():,.2f}")
                     mc2.metric("⚙️ Khe Răng Lược", f"{df_chua_chot['SL_KheRangLuoc'].sum():,.2f}")
                     mc3.metric("🧱 Tấm VCO", f"{df_chua_chot['SL_TamVCO'].sum():,.2f}")
-                    mc4, mc5, mc6 = st.columns(3)
-                    mc4.metric("🏗️ Cột H (Phụ Kiện)", f"{df_chua_chot['SL_HeCotPhuKien'].sum():,.2f}")
-                    mc5.metric("📋 Sản Phẩm Khác", f"{df_chua_chot['SL_NhomKhac'].sum():,.2f}")
+                    mc4.metric("🏗️ Cột H (PK)", f"{df_chua_chot['SL_HeCotPhuKien'].sum():,.2f}")
+                    mc5.metric("📋 SP Khác", f"{df_chua_chot['SL_NhomKhac'].sum():,.2f}")
                     mc6.metric("🎯 Tổng Cộng", f"{df_chua_chot[q_col].sum():,.2f}")
 
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
-                    search_kw = st.text_input("🔍 Tìm kiếm nhanh:", key=f"s_{i}")
+                    
+                    col_search, col_export, _ = st.columns([1.8, 1.4, 2.8])
+                    with col_search:
+                        st.markdown('<div class="search-input-wrap">', unsafe_allow_html=True)
+                        search_kw = st.text_input("Tìm:", placeholder="🔍 Nhập Mã ĐH, Dự án...", key=f"s_{i}", label_visibility="collapsed")
+                        st.markdown('</div>', unsafe_allow_html=True)
+
                     df_show = df_chua_chot[df_chua_chot['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else df_chua_chot
+
+                    with col_export:
+                        excel_buf = io.BytesIO()
+                        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+                            df_show[cols_display].to_excel(writer, index=False, sheet_name="Chua Chot Tien Do")
+                        st.download_button(
+                            label="📥 Xuất Excel (Chưa Chốt)",
+                            data=excel_buf.getvalue(),
+                            file_name=f"Chua_Chot_Tien_Do_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key=f"btn_ex_{i}"
+                        )
+
                     render_pretty_table(df_show, cols_display, q_col, f"chuachot_{i}")
                     continue
 
@@ -678,35 +738,46 @@ def render_dashboard():
                 _khong_tam_dung = lambda d: d[~d['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
                 _ton_dong = lambda d: d[~(d['Da_Nhap_Kho'] & d['Ngay_NhapKho_DT'].notna() & (d['Ngay_NhapKho_DT'] <= end_date))]
 
-                m1, m2, m3 = st.columns(3)
+                # THU GỌN 6 CHỈ SỐ LÊN CÙNG 1 HÀNG (LOẠI BỎ HOÀN TOÀN KHOẢNG TRẮNG DƯ)
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                m1, m2, m3, m4, m5, m6 = st.columns(6)
                 m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sub_moi[q_col].sum():,.2f}")
                 m2.metric(f"🔥 Đặt & Cần Giao", f"{sub_moi_can[q_col].sum():,.2f}")
                 m3.metric("⏳ Tồn Lũy Kế", f"{sub_ton_can[q_col].sum():,.2f}")
-                m4, m5, m6 = st.columns(3)
                 m4.metric("🎯 Tổng Cần SX", f"{_khong_tam_dung(sub_moi_can)[q_col].sum() + _khong_tam_dung(sub_ton_can)[q_col].sum():,.2f}")
                 m5.metric("✅ Đã Nhập Kho", f"{sub_done[q_col].sum():,.2f}")
                 m6.metric("⚠️ Còn Phải SX", f"{_khong_tam_dung(_ton_dong(sub_moi_can))[q_col].sum() + _khong_tam_dung(_ton_dong(sub_ton_can))[q_col].sum():,.2f}")
 
                 st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
-                col_s, col_e = st.columns([3, 1])
-                with col_s:
-                    search_kw = st.text_input("🔍 Tìm kiếm nhanh:", key=f"s_{i}")
-                with col_e:
-                    excel_data = convert_df_to_excel(sub_moi, sub_ton_can, sub_done, cols_display, ten_ky_hien_thi)
-                    st.download_button("📥 Xuất Excel", data=excel_data, file_name=f"Bao_Cao_{ten_ky_hien_thi}.xlsx", use_container_width=True, key=f"btn_ex_{i}")
 
-                if search_kw:
-                    sub_moi = sub_moi[sub_moi['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
-                    sub_ton_can = sub_ton_can[sub_ton_can['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
-                    sub_done = sub_done[sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)]
+                col_s, col_e, _ = st.columns([1.8, 1.4, 2.8])
+                with col_s:
+                    st.markdown('<div class="search-input-wrap">', unsafe_allow_html=True)
+                    search_kw = st.text_input(f"Tìm:", placeholder=f"🔍 Tìm trong {ten_sp_thuan}...", key=f"s_{i}", label_visibility="collapsed")
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                sub_moi_view = sub_moi[sub_moi['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_moi
+                sub_ton_view = sub_ton_can[sub_ton_can['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_ton_can
+                sub_done_view = sub_done[sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_done
+
+                with col_e:
+                    excel_data = convert_df_to_excel_by_product(sub_moi_view, sub_ton_view, sub_done_view, cols_display, ten_ky_hien_thi, ten_sp_thuan)
+                    st.download_button(
+                        label=f"📥 Xuất Excel ({ten_sp_thuan})",
+                        data=excel_data,
+                        file_name=f"Bao_Cao_{re.sub(r'[^a-zA-Z0-9_-]', '_', ten_sp_thuan)}_{re.sub(r'[\/\\\?\*\:\[\]]', '-', ten_ky_hien_thi)}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                        key=f"btn_ex_{i}"
+                    )
 
                 st1, st2, st3 = st.tabs(["🆕 Đơn Đặt Mới", "⌛ Đơn Tồn Cần Giao", "✅ Đơn Đã Nhập Kho"])
                 with st1:
-                    render_pretty_table(sub_moi, cols_display, q_col, f"moi_{i}")
+                    render_pretty_table(sub_moi_view, cols_display, q_col, f"moi_{i}")
                 with st2:
-                    render_pretty_table(sub_ton_can, cols_display, q_col, f"ton_{i}")
+                    render_pretty_table(sub_ton_view, cols_display, q_col, f"ton_{i}")
                 with st3:
-                    render_pretty_table(sub_done, cols_display, q_col, f"done_{i}")
+                    render_pretty_table(sub_done_view, cols_display, q_col, f"done_{i}")
 
     except Exception as e:
         st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
