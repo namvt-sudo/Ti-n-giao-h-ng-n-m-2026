@@ -186,42 +186,46 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ================= THU GỌN METRIC CARDS (CHỐNG DƯ KHOẢNG TRẮNG) ================= */
+    /* ================= THU GỌN METRIC CARDS & CHỐNG CẮT SỐ ================= */
     div[data-testid="stMetric"] {
         background: linear-gradient(145deg, #ffffff 0%, #e8f4fd 60%, #d6edff 100%);
-        padding: 8px 12px !important;
-        border-radius: 12px !important;
-        border-left: 5px solid #1976d2 !important;
-        box-shadow: 0 3px 10px rgba(13,71,161,0.12) !important;
+        padding: 8px 4px !important;
+        border-radius: 10px !important;
+        border-left: 4px solid #1976d2 !important;
+        box-shadow: 0 2px 8px rgba(13,71,161,0.10) !important;
         text-align: center !important;
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(13,71,161,0.20) !important;
+        box-shadow: 0 5px 14px rgba(13,71,161,0.18) !important;
     }
     div[data-testid="stMetricLabel"] {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         justify-content: center !important;
     }
     div[data-testid="stMetricLabel"] p {
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         text-align: center !important;
         margin-bottom: 2px !important;
     }
     div[data-testid="stMetricValue"] {
         color: #0b3d91 !important;
         font-weight: 900 !important;
-        font-size: 21px !important;
+        font-size: 17px !important; /* Cỡ chữ cân đối, không lo tràn */
         justify-content: center !important;
+        overflow: visible !important;
+        white-space: nowrap !important;
     }
     div[data-testid="stMetricValue"] div {
         text-align: center !important;
         width: 100% !important;
+        overflow: visible !important;
+        text-overflow: unset !important; /* Không bao giờ cắt thành dấu ... */
     }
 
     /* BẢNG DỮ LIỆU */
@@ -453,6 +457,18 @@ def style_canh_bao(val):
         return 'background-color: #e9ecef; color: #6c757d;'
     return ''
 
+# ĐỊNH DẠNG SỐ GỌN GÀNG: Nếu là số nguyên thì không hiện .00, số lẻ thì giữ 2 chữ số
+def format_number_smart(val):
+    if pd.isna(val) or val is None:
+        return "0"
+    try:
+        f_val = float(val)
+        if f_val.is_integer():
+            return f"{int(f_val):,}"
+        return f"{f_val:,.2f}"
+    except Exception:
+        return str(val)
+
 def render_pretty_table(df_show, cols, q_col, table_key):
     label_map = {
         "So_DH": "Mã ĐH",
@@ -475,7 +491,7 @@ def render_pretty_table(df_show, cols, q_col, table_key):
         if c in disp.columns:
             disp[c] = disp[c].dt.strftime('%d/%m/%Y').fillna('')
     if q_col in disp.columns:
-        disp[q_col] = disp[q_col].map(lambda v: f"{v:,.2f}")
+        disp[q_col] = disp[q_col].map(format_number_smart)
 
     disp = disp.rename(columns=label_map)
     canh_bao_label = label_map.get("Canh_Bao_Tien_Do", "Canh_Bao_Tien_Do")
@@ -689,15 +705,15 @@ def render_dashboard():
                     df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
                     cols_display = ['So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col, 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']
 
-                    # THU GỌN VỀ 1 HÀNG 7 Ô CÂN XỨNG
+                    # 7 Ô CHỈ SỐ: DÙNG HÀM format_number_smart ĐỂ KHÔNG BỊ CẮT SỐ
                     mc0, mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(7)
-                    mc0.metric("📄 ĐH Chưa Chốt", f"{len(df_chua_chot):,}")
-                    mc1.metric("📦 Gối Chậu", f"{df_chua_chot['SL_GoiChau'].sum():,.2f}")
-                    mc2.metric("⚙️ Khe Răng Lược", f"{df_chua_chot['SL_KheRangLuoc'].sum():,.2f}")
-                    mc3.metric("🧱 Tấm VCO", f"{df_chua_chot['SL_TamVCO'].sum():,.2f}")
-                    mc4.metric("🏗️ Cột H (PK)", f"{df_chua_chot['SL_HeCotPhuKien'].sum():,.2f}")
-                    mc5.metric("📋 SP Khác", f"{df_chua_chot['SL_NhomKhac'].sum():,.2f}")
-                    mc6.metric("🎯 Tổng Cộng", f"{df_chua_chot[q_col].sum():,.2f}")
+                    mc0.metric("📄 ĐH Chưa Chốt", format_number_smart(len(df_chua_chot)))
+                    mc1.metric("📦 Gối Chậu", format_number_smart(df_chua_chot['SL_GoiChau'].sum()))
+                    mc2.metric("⚙️ Khe Răng", format_number_smart(df_chua_chot['SL_KheRangLuoc'].sum()))
+                    mc3.metric("🧱 Tấm VCO", format_number_smart(df_chua_chot['SL_TamVCO'].sum()))
+                    mc4.metric("🏗️ Cột H (PK)", format_number_smart(df_chua_chot['SL_HeCotPhuKien'].sum()))
+                    mc5.metric("📋 SP Khác", format_number_smart(df_chua_chot['SL_NhomKhac'].sum()))
+                    mc6.metric("🎯 Tổng Cộng", format_number_smart(df_chua_chot[q_col].sum()))
 
                     st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
                     
@@ -738,15 +754,15 @@ def render_dashboard():
                 _khong_tam_dung = lambda d: d[~d['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
                 _ton_dong = lambda d: d[~(d['Da_Nhap_Kho'] & d['Ngay_NhapKho_DT'].notna() & (d['Ngay_NhapKho_DT'] <= end_date))]
 
-                # THU GỌN 6 CHỈ SỐ LÊN CÙNG 1 HÀNG (LOẠI BỎ HOÀN TOÀN KHOẢNG TRẮNG DƯ)
+                # 6 Ô CHỈ SỐ: HIỂN THỊ RÕ RÀNG KHÔNG BỊ DẤU CHẤM TRÀN SỐ
                 st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
                 m1, m2, m3, m4, m5, m6 = st.columns(6)
-                m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", f"{sub_moi[q_col].sum():,.2f}")
-                m2.metric(f"🔥 Đặt & Cần Giao", f"{sub_moi_can[q_col].sum():,.2f}")
-                m3.metric("⏳ Tồn Lũy Kế", f"{sub_ton_can[q_col].sum():,.2f}")
-                m4.metric("🎯 Tổng Cần SX", f"{_khong_tam_dung(sub_moi_can)[q_col].sum() + _khong_tam_dung(sub_ton_can)[q_col].sum():,.2f}")
-                m5.metric("✅ Đã Nhập Kho", f"{sub_done[q_col].sum():,.2f}")
-                m6.metric("⚠️ Còn Phải SX", f"{_khong_tam_dung(_ton_dong(sub_moi_can))[q_col].sum() + _khong_tam_dung(_ton_dong(sub_ton_can))[q_col].sum():,.2f}")
+                m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", format_number_smart(sub_moi[q_col].sum()))
+                m2.metric("🔥 Đặt & Cần Giao", format_number_smart(sub_moi_can[q_col].sum()))
+                m3.metric("⏳ Tồn Lũy Kế", format_number_smart(sub_ton_can[q_col].sum()))
+                m4.metric("🎯 Tổng Cần SX", format_number_smart(_khong_tam_dung(sub_moi_can)[q_col].sum() + _khong_tam_dung(sub_ton_can)[q_col].sum()))
+                m5.metric("✅ Đã Nhập Kho", format_number_smart(sub_done[q_col].sum()))
+                m6.metric("⚠️ Còn Phải SX", format_number_smart(_khong_tam_dung(_ton_dong(sub_moi_can))[q_col].sum() + _khong_tam_dung(_ton_dong(sub_ton_can))[q_col].sum()))
 
                 st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
 
