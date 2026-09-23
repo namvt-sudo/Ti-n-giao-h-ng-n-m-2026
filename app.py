@@ -21,14 +21,22 @@ st.markdown("""
         font-family: 'Be Vietnam Pro', sans-serif !important;
     }
 
-    /* ẨN TOÀN BỘ THANH HEADER */
+    /* ẨN HEADER VÀ NÚT MANAGE APP / THUYỀN GIẤY Ở GÓC DƯỚI */
     header[data-testid="stHeader"],
     #MainMenu,
     .stAppDeployButton,
-    footer {
+    footer,
+    [data-testid="manage-app-button"],
+    .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_,
+    div[class*="viewerBadge"],
+    div[class*="manageApp"],
+    div[data-testid="stStatusWidget"] {
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 
     .stApp {
