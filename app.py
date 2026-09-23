@@ -186,41 +186,62 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ================= THU GỌN KHUNG VỪA VẶN VỚI CHỮ - CHỮ TO RÕ ================= */
+    /* ================= THẺ METRIC: CĂN RA CHÍNH GIỮA TUYỆT ĐỐI ================= */
     div[data-testid="stMetric"] {
-        background: linear-gradient(145deg, #ffffff 0%, #eef6ff 60%, #dbeeff 100%);
-        padding: 10px 16px !important;
+        background: linear-gradient(145deg, #ffffff 0%, #edf5ff 60%, #d8edff 100%) !important;
+        padding: 12px 16px !important;
         border-radius: 14px !important;
-        border-left: 5px solid #1976d2 !important;
-        box-shadow: 0 3px 10px rgba(13,71,161,0.12) !important;
-        width: 100% !important;
-        max-width: 240px !important; /* Khóa chiều rộng vừa vặn với số, không kéo dài */
+        border-left: 6px solid #1976d2 !important;
+        box-shadow: 0 4px 12px rgba(13,71,161,0.12) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        margin: 0 auto !important;
+        max-width: 320px !important;
         transition: all 0.2s ease-in-out !important;
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(13,71,161,0.20) !important;
+        box-shadow: 0 8px 18px rgba(13,71,161,0.22) !important;
     }
     div[data-testid="stMetricLabel"] {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 13px !important;
+        font-size: 14px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
     div[data-testid="stMetricLabel"] p {
-        font-size: 13px !important;
-        margin-bottom: 2px !important;
+        font-size: 14px !important;
+        text-align: center !important;
+        margin: 0 auto 4px auto !important;
+        width: 100% !important;
     }
     div[data-testid="stMetricValue"] {
         color: #0b3d91 !important;
         font-weight: 900 !important;
-        font-size: 24px !important; /* Chữ to rõ ràng, không bị bé */
+        font-size: 28px !important; /* Chữ số to nổi bật */
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
         overflow: visible !important;
         white-space: nowrap !important;
     }
     div[data-testid="stMetricValue"] div {
+        display: flex !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
         overflow: visible !important;
         text-overflow: unset !important;
     }
@@ -751,7 +772,7 @@ def render_dashboard():
                 _khong_tam_dung = lambda d: d[~d['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
                 _ton_dong = lambda d: d[~(d['Da_Nhap_Kho'] & d['Ngay_NhapKho_DT'].notna() & (d['Ngay_NhapKho_DT'] <= end_date))]
 
-                # BỐ TRÍ 2 HÀNG x 3 CỘT VỚI KHUNG VỪA VẶN CHỮ
+                # BỐ TRÍ 2 HÀNG x 3 CỘT: CĂN GIỮA NỘI DUNG, CHỮ TO RÕ RÀNG
                 st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", format_number_smart(sub_moi[q_col].sum()))
