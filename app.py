@@ -125,7 +125,7 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important;
     }
 
-    /* THU GỌN VÀ LÀM ĐẸP Ô TÌM KIẾM */
+    /* Ô TÌM KIẾM */
     .search-input-wrap div[data-testid="stTextInput"] {
         max-width: 320px !important;
     }
@@ -186,42 +186,43 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ================= THẺ METRIC CHỮ TO - RÕ RÀNG - KHÔNG KÉO DÃN ================= */
+    /* ================= THU GỌN KHUNG VỪA VẶN VỚI CHỮ - CHỮ TO RÕ ================= */
     div[data-testid="stMetric"] {
         background: linear-gradient(145deg, #ffffff 0%, #eef6ff 60%, #dbeeff 100%);
-        padding: 10px 14px !important;
-        border-radius: 12px !important;
+        padding: 10px 16px !important;
+        border-radius: 14px !important;
         border-left: 5px solid #1976d2 !important;
         box-shadow: 0 3px 10px rgba(13,71,161,0.12) !important;
+        width: 100% !important;
+        max-width: 240px !important; /* Khóa chiều rộng vừa vặn với số, không kéo dài */
         transition: all 0.2s ease-in-out !important;
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(13,71,161,0.22) !important;
+        box-shadow: 0 6px 16px rgba(13,71,161,0.20) !important;
     }
     div[data-testid="stMetricLabel"] {
         color: #0d47a1 !important;
         font-weight: 800 !important;
-        font-size: 13.5px !important;
+        font-size: 13px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
     div[data-testid="stMetricLabel"] p {
-        font-size: 13.5px !important;
+        font-size: 13px !important;
         margin-bottom: 2px !important;
     }
     div[data-testid="stMetricValue"] {
         color: #0b3d91 !important;
         font-weight: 900 !important;
-        font-size: 23px !important; /* CHỮ TO RÕ RÀNG */
+        font-size: 24px !important; /* Chữ to rõ ràng, không bị bé */
         overflow: visible !important;
         white-space: nowrap !important;
     }
     div[data-testid="stMetricValue"] div {
-        width: 100% !important;
         overflow: visible !important;
-        text-overflow: unset !important; /* Không bao giờ cắt thành ... */
+        text-overflow: unset !important;
     }
 
     /* BẢNG DỮ LIỆU */
@@ -290,7 +291,6 @@ st.markdown("""
         position: relative;
     }
 
-    /* BUNG CHỮ ĐẦY ĐỦ KHI HOVER / CLICK */
     .table-wrap tbody td:nth-child(4):hover,
     .table-wrap tbody td:nth-child(5):hover,
     .table-wrap tbody td:nth-child(4):active,
@@ -308,7 +308,6 @@ st.markdown("""
         border-radius: 6px !important;
     }
 
-    /* NÚT TẢI EXCEL */
     div[data-testid="stDownloadButton"] button {
         background: linear-gradient(90deg, #0d47a1, #00b4d8) !important;
         color: #ffffff !important;
@@ -453,7 +452,6 @@ def style_canh_bao(val):
         return 'background-color: #e9ecef; color: #6c757d;'
     return ''
 
-# ĐỊNH DẠNG SỐ GỌN GÀNG
 def format_number_smart(val):
     if pd.isna(val) or val is None:
         return "0"
@@ -701,7 +699,6 @@ def render_dashboard():
                     df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
                     cols_display = ['So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col, 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']
 
-                    # BỐ TRÍ TAB CHƯA CHỐT THÀNH 2 HÀNG: HÀNG TRÊN 4 Ô, HÀNG DƯỚI 3 Ô ĐỂ CHỮ TO RÕ RÀNG
                     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
                     mc0, mc1, mc2, mc3 = st.columns(4)
                     mc0.metric("📄 ĐH Chưa Chốt", format_number_smart(len(df_chua_chot)))
@@ -754,7 +751,7 @@ def render_dashboard():
                 _khong_tam_dung = lambda d: d[~d['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
                 _ton_dong = lambda d: d[~(d['Da_Nhap_Kho'] & d['Ngay_NhapKho_DT'].notna() & (d['Ngay_NhapKho_DT'] <= end_date))]
 
-                # BỐ TRÍ 6 Ô CHỈ SỐ THÀNH 2 HÀNG X 3 CỘT (CHỮ TO RÕ RÀNG 23PX, CÂN ĐỐI)
+                # BỐ TRÍ 2 HÀNG x 3 CỘT VỚI KHUNG VỪA VẶN CHỮ
                 st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", format_number_smart(sub_moi[q_col].sum()))
