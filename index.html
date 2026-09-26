@@ -1,805 +1,616 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>VHIP - Quản Lý Tiến Độ & Sản Lượng</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.css" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.js"></script>
-    <script>
-      stlite.mount({
-        // Khai báo các thư viện Python bổ sung cần cài đặt
-        requirements: ["pandas", "openpyxl"],
-        entrypoint: "streamlit_app.py",
-        files: {
-          "streamlit_app.py": `import streamlit as st
-import pandas as pd
-import io
-import re
-from datetime import datetime
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VHIP - Quản Lý Tiến Độ & Sản Lượng</title>
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- SheetJS để đọc CSV và xuất Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-# 1. CẤU HÌNH TRANG WEB & CSS
-st.set_page_config(
-    page_title="VHIP - Quản Lý Tiến Độ & Sản Lượng",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Be Vietnam Pro', sans-serif; }
+    body { background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%); color: #0f172a; min-height: 100vh; padding: 15px; }
 
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Be Vietnam Pro', sans-serif !important;
+    /* Màn hình đăng nhập */
+    #login-screen {
+      max-width: 420px; margin: 80px auto; background: #fff; padding: 30px;
+      border-radius: 16px; border: 1.5px solid #bcd6ff; box-shadow: 0 8px 24px rgba(13,71,161,0.12); text-align: center;
     }
-
-    header[data-testid="stHeader"],
-    #MainMenu,
-    .stAppDeployButton,
-    footer {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0px !important;
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #0d47a1; margin-bottom: 6px; }
+    .form-control {
+      width: 100%; padding: 10px 14px; border: 1.5px solid #93b8f2; border-radius: 10px; font-size: 14px; outline: none;
     }
-
-    .stApp {
-        background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%);
+    .form-control:focus { border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.15); }
+    .btn-login {
+      width: 100%; padding: 12px; background: linear-gradient(90deg, #0d47a1, #1565c0);
+      color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 15px; cursor: pointer; transition: 0.2s;
     }
+    .btn-login:hover { opacity: 0.95; transform: translateY(-1px); }
 
-    .main { padding: 0.8rem 1.2rem; }
-
-    [data-stale="true"],
-    [data-stale="true"] *,
-    .main [data-stale="true"],
-    .main [data-stale="true"] * {
-        opacity: 1 !important;
-        transition: none !important;
-        animation: none !important;
-        filter: none !important;
-    }
-
-    .main-title {
-        background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: 28px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        margin-bottom: 4px;
-        padding-bottom: 8px;
-        border-bottom: 4px solid transparent;
-        border-image: linear-gradient(90deg, #0d47a1, #00b4d8, #90e0ef) 1;
-    }
-
+    /* Top bar */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .update-badge {
-        display: inline-block;
-        font-size: 13px;
-        font-weight: 700;
-        color: #ffffff;
-        background: linear-gradient(90deg, #1e88e5, #00acc1);
-        padding: 4px 14px;
-        border-radius: 20px;
-        box-shadow: 0 3px 8px rgba(30,136,229,0.35);
-        margin-bottom: 8px;
+      display: inline-block; font-size: 13px; font-weight: 700; color: #ffffff;
+      background: linear-gradient(90deg, #1e88e5, #00acc1); padding: 5px 16px; border-radius: 20px; box-shadow: 0 3px 8px rgba(30,136,229,0.35);
+    }
+    .btn-action {
+      background: #fff; border: 1.5px solid #93b8f2; padding: 6px 14px; border-radius: 10px;
+      color: #0d47a1; font-weight: 700; cursor: pointer; font-size: 13px; transition: 0.2s;
+    }
+    .btn-action:hover { background: #eef5ff; }
+
+    /* Main Title */
+    .main-title {
+      background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px;
+      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 4px solid #0d47a1;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
-        border: 1.5px solid #bcd6ff !important;
-        border-radius: 14px !important;
-        box-shadow: 0 4px 14px rgba(13,71,161,0.08) !important;
-        padding: 8px 12px !important;
+    /* Bộ lọc */
+    .filter-box {
+      background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
+      border: 1.5px solid #bcd6ff; border-radius: 14px; box-shadow: 0 4px 14px rgba(13,71,161,0.08); padding: 12px 16px; margin-bottom: 16px;
     }
-
-    .sub-title-clean {
-        color: #0d47a1;
-        font-size: 18px;
-        font-weight: 800;
-        margin-top: 2px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
+    .filter-title { color: #0d47a1; font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
     .filter-chip-label {
-        display: inline-block;
-        background: linear-gradient(90deg, #e7f0ff, #ffffff);
-        border: 1px solid #b9d4ff;
-        border-left: 4px solid #1565c0;
-        border-radius: 8px;
-        padding: 4px 8px;
-        margin-bottom: 5px;
-        color: #0d47a1;
-        font-weight: 800;
-        font-size: 13px;
-        box-shadow: 0 2px 6px rgba(13,71,161,0.06);
+      display: inline-block; background: #e7f0ff; border: 1px solid #b9d4ff; border-left: 4px solid #1565c0;
+      border-radius: 6px; padding: 3px 8px; margin-bottom: 4px; color: #0d47a1; font-weight: 800; font-size: 12px;
+    }
+    select.filter-select {
+      width: 100%; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #93b8f2;
+      background: #fff; font-size: 13px; font-weight: 600; color: #0d47a1; outline: none; cursor: pointer;
     }
 
-    div[data-testid="stWidgetLabel"] label,
-    div[data-testid="stWidgetLabel"] p {
-        color: #0d47a1 !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        opacity: 1 !important;
+    /* Danh mục Tab sản phẩm */
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .tab-btn {
+      background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 2px solid #93b8f2;
+      border-radius: 12px; padding: 8px 16px; color: #0d47a1; font-weight: 800; font-size: 13.5px; cursor: pointer; transition: 0.2s;
+    }
+    .tab-btn.active {
+      background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8); color: #fff; border-color: #0d47a1; transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(13,71,161,0.35);
     }
 
-    div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        border-radius: 10px !important;
-        border: 1.5px solid #93b8f2 !important;
-        box-shadow: 0 1px 4px rgba(13,71,161,0.08) !important;
-        transition: all 0.2s ease-in-out !important;
+    /* Metric Cards */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .metric-card {
+      background: linear-gradient(145deg, #ffffff 0%, #eef5ff 60%, #d8edff 100%);
+      padding: 10px 14px; border-radius: 12px; border-left: 5px solid #1976d2; box-shadow: 0 3px 10px rgba(13,71,161,0.12);
+      text-align: center; transition: 0.2s;
+    }
+    .metric-card:hover { transform: translateY(-2px); }
+    .metric-label { color: #0d47a1; font-weight: 800; font-size: 12.5px; margin-bottom: 4px; }
+    .metric-value { color: #0b3d91; font-weight: 900; font-size: 24px; }
+
+    /* Sub Tabs & Công cụ */
+    .sub-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .sub-tabs { display: flex; gap: 6px; }
+    .sub-tab-btn {
+      padding: 6px 14px; border-radius: 8px; border: 1.5px solid #bcd6ff; background: #fff;
+      font-weight: 700; font-size: 13px; color: #0d47a1; cursor: pointer;
+    }
+    .sub-tab-btn.active { background: #0d47a1; color: #fff; border-color: #0d47a1; }
+    .actions-wrap { display: flex; gap: 10px; align-items: center; }
+    .search-box {
+      border: 1.5px solid #93b8f2; border-radius: 20px; padding: 6px 14px; font-size: 13px; width: 220px; outline: none;
+    }
+    .btn-export {
+      background: linear-gradient(90deg, #0d47a1, #00b4d8); color: #fff; font-weight: 800;
+      font-size: 13px; border: none; padding: 7px 16px; border-radius: 20px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,180,216,0.4); }
+
+    /* Bảng dữ liệu */
+    .table-container {
+      max-height: 480px; overflow: auto; border-radius: 12px; border: 1px solid #cfe0ff;
+      box-shadow: 0 4px 14px rgba(13,71,161,0.1); background: #fff;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+    thead th {
+      position: sticky; top: 0; background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1);
+      color: #fff; font-weight: 800; padding: 10px 12px; text-align: center; border-bottom: 2px solid #08306b; z-index: 2;
+    }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid #e6edf7; text-align: center; }
+    tbody tr:nth-child(even) td { background-color: #f7faff; }
+    tbody tr:hover td { background-color: #e3f0ff; }
+    
+    /* Highlight tooltip cột Dự Án, Quy Cách */
+    td.col-expand {
+      max-width: 180px; min-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+    }
+    td.col-expand:hover {
+      white-space: normal; overflow: visible; background-color: #fff9c4 !important; color: #0d47a1; font-weight: 600;
     }
 
-    .search-input-wrap div[data-testid="stTextInput"] {
-        max-width: 320px !important;
-    }
-    .search-input-wrap div[data-testid="stTextInput"] input {
-        border-radius: 20px !important;
-        border: 1.5px solid #93b8f2 !important;
-        padding-left: 14px !important;
-        font-size: 13.5px !important;
-        background-color: #ffffff !important;
-        box-shadow: 0 2px 6px rgba(13,71,161,0.06) !important;
-    }
+    /* Style Cảnh Báo */
+    .cb-red { background-color: #ffc9c9 !important; color: #900C3F; font-weight: bold; }
+    .cb-orange { background-color: #ffe5b4 !important; color: #d35400; font-weight: bold; }
+    .cb-yellow { background-color: #fff9c4 !important; color: #856404; }
+    .cb-green { background-color: #d4edda !important; color: #155724; }
+    .cb-gray { background-color: #e9ecef !important; color: #6c757d; }
 
-    div[data-testid="stTabs"] [role="tablist"],
-    div[data-testid="stTabs"] div[data-baseweb="tab-list"] {
-        gap: 8px !important;
-        border-bottom: none !important;
-        padding: 4px 6px 12px 6px !important;
-        background: transparent !important;
-        flex-wrap: wrap !important;
-    }
+    #loading { text-align: center; padding: 40px; font-weight: 700; color: #0d47a1; font-size: 16px; }
+  </style>
+</head>
+<body>
 
-    div[data-testid="stTabs"] [role="tab"],
-    div[data-testid="stTabs"] button[data-baseweb="tab"] {
-        background: linear-gradient(135deg, #ffffff, #f2f7ff) !important;
-        border: 2px solid #93b8f2 !important;
-        border-radius: 12px !important;
-        padding: 8px 16px !important;
-        box-shadow: 0 3px 8px rgba(13,71,161,0.08) !important;
-        transition: all 0.2s ease-in-out !important;
-    }
+  <!-- MÀN HÌNH ĐĂNG NHẬP -->
+  <div id="login-screen">
+    <h2 style="color: #0d47a1; margin-bottom: 8px;">🛡️ VHIP - ĐĂNG NHẬP</h2>
+    <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">Nhập tài khoản công ty để truy cập Dashboard</p>
+    <div class="form-group">
+      <label>Tên đăng nhập</label>
+      <input type="text" id="login-user" class="form-control" placeholder="Nhập tên đăng nhập">
+    </div>
+    <div class="form-group">
+      <label>Mật khẩu</label>
+      <input type="password" id="login-pass" class="form-control" placeholder="Nhập mật khẩu">
+    </div>
+    <div id="login-err" style="color: #d32f2f; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
+    <button class="btn-login" onclick="handleLogin()">Đăng Nhập</button>
+  </div>
 
-    div[data-testid="stTabs"] [role="tab"] p,
-    div[data-testid="stTabs"] [role="tab"] span,
-    div[data-testid="stTabs"] [role="tab"] div {
-        color: #0d47a1 !important;
-        font-weight: 800 !important;
-        font-size: 14px !important;
-    }
+  <!-- DASHBOARD CHÍNH -->
+  <div id="app" style="display: none;">
+    <div class="top-bar">
+      <div class="update-badge" id="update-badge">🔄 Đang tải...</div>
+      <div>
+        <button class="btn-action" onclick="fetchData()">⚡ Làm Mới Ngay</button>
+        <button class="btn-action" onclick="handleLogout()" style="margin-left: 6px;">🚪 Đăng Xuất</button>
+      </div>
+    </div>
 
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-        background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8) !important;
-        border: 2px solid #0d47a1 !important;
-        box-shadow: 0 6px 16px rgba(13,71,161,0.40) !important;
-        transform: translateY(-2px) !important;
-    }
+    <div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>
 
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] p,
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] span,
-    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] div {
-        color: #ffffff !important;
-        font-weight: 900 !important;
-    }
-
-    div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
-    div[data-testid="stTabs"] [data-baseweb="tab-border"] {
-        background-color: transparent !important;
-        display: none !important;
-    }
-
-    div[data-testid="stMetric"] {
-        background: linear-gradient(145deg, #ffffff 0%, #eef5ff 60%, #d8edff 100%) !important;
-        padding: 8px 12px !important;
-        border-radius: 12px !important;
-        border-left: 5px solid #1976d2 !important;
-        box-shadow: 0 3px 10px rgba(13,71,161,0.12) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        margin: 0 auto !important;
-        max-width: 210px !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(13,71,161,0.20) !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        color: #0d47a1 !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-    div[data-testid="stMetricLabel"] p {
-        font-size: 13px !important;
-        text-align: center !important;
-        margin: 0 auto 2px auto !important;
-        width: 100% !important;
-    }
-    div[data-testid="stMetricValue"] {
-        color: #0b3d91 !important;
-        font-weight: 900 !important;
-        font-size: 26px !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        overflow: visible !important;
-        white-space: nowrap !important;
-    }
-
-    .table-wrap {
-        max-height: 480px;
-        overflow: auto;
-        border-radius: 12px;
-        box-shadow: 0 4px 14px rgba(13,71,161,0.12);
-        border: 1px solid #cfe0ff;
-        margin-bottom: 8px;
-    }
-    .table-wrap.table-empty {
-        max-height: none;
-        padding: 18px;
-        text-align: center;
-        color: #64748b;
-        font-weight: 600;
-        background: #f8fafc;
-    }
-    .table-wrap table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
-        font-size: 13.5px;
-        background: #ffffff;
-    }
-    .table-wrap thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1) !important;
-        color: #ffffff !important;
-        font-weight: 800 !important;
-        font-size: 13.5px !important;
-        text-align: center !important;
-        padding: 10px 12px !important;
-        border-bottom: 2px solid #08306b !important;
-        white-space: nowrap;
-    }
-    .table-wrap tbody td {
-        padding: 8px 12px !important;
-        color: #0f172a;
-        border-bottom: 1px solid #e6edf7;
-        white-space: nowrap;
-    }
-    .table-wrap tbody tr:nth-child(even) td {
-        background-color: #f4f8ff;
-    }
-    .table-wrap tbody tr:hover td {
-        background-color: #e3f0ff !important;
-        transition: background-color 0.15s ease-in-out;
-    }
-    .table-wrap tbody th {
-        display: none;
-    }
-
-    .table-wrap tbody td:nth-child(4),
-    .table-wrap tbody td:nth-child(5) {
-        max-width: 190px !important;
-        min-width: 140px !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-        cursor: pointer !important;
-        position: relative;
-    }
-
-    .table-wrap tbody td:nth-child(4):hover,
-    .table-wrap tbody td:nth-child(5):hover {
-        max-width: none !important;
-        overflow: visible !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        position: relative !important;
-        z-index: 99 !important;
-        background-color: #fff9c4 !important;
-        color: #0d47a1 !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.25) !important;
-        border-radius: 6px !important;
-    }
-
-    div[data-testid="stDownloadButton"] button {
-        background: linear-gradient(90deg, #0d47a1, #00b4d8) !important;
-        color: #ffffff !important;
-        font-weight: 800 !important;
-        border-radius: 20px !important;
-        border: none !important;
-        font-size: 13.5px !important;
-        padding: 6px 16px !important;
-        box-shadow: 0 4px 12px rgba(13,71,161,0.25) !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-
-    .soft-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #b9d4ff, transparent);
-        margin: 12px 0 14px 0;
-        border: none;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# 2. XỬ LÝ DỮ LIỆU
-GGS_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/export?format=csv&gid=984933238"
-
-TEN_DANG_NHAP_CHUNG = "VHIP"
-MAT_KHAU_CHUNG = "1"
-
-def man_hinh_dang_nhap():
-    st.markdown("""
-        <div style='text-align:center; margin-top:30px; margin-bottom:10px;'>
-            <div class="main-title" style="font-size:26px; display:inline-block;">🛡️ VHIP - ĐĂNG NHẬP HỆ THỐNG</div>
+    <!-- BỘ LỌC -->
+    <div class="filter-box">
+      <div class="filter-title">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>
+      <div class="filter-grid">
+        <div>
+          <span class="filter-chip-label">📅 Chọn Năm</span>
+          <select id="f-year" class="filter-select" onchange="render()"><option value="ALL">Tất cả các năm</option><option value="2026" selected>2026</option></select>
         </div>
-    """, unsafe_allow_html=True)
-    col_l, col_mid, col_r = st.columns([1, 1.4, 1])
-    with col_mid:
-        with st.container(border=True):
-            st.caption("Nhập Tên đăng nhập và Mật khẩu chung của công ty để vào dashboard.")
-            ten = st.text_input("Tên đăng nhập", key="login_ten")
-            mk = st.text_input("Mật khẩu", type="password", key="login_mk")
-            if st.button("Đăng Nhập", use_container_width=True, key="btn_dangnhap"):
-                if ten.strip() == TEN_DANG_NHAP_CHUNG and mk == MAT_KHAU_CHUNG:
-                    st.session_state.logged_in = True
-                    st.rerun()
-                else:
-                    st.error("Sai tên đăng nhập hoặc mật khẩu.")
+        <div>
+          <span class="filter-chip-label">⏱️ Kỳ Báo Cáo</span>
+          <select id="f-period" class="filter-select" onchange="onPeriodChange()">
+            <option value="YEAR" selected>Cả Năm</option>
+            <option value="MONTH">Theo Tháng</option>
+            <option value="QUARTER">Theo Quý</option>
+          </select>
+        </div>
+        <div>
+          <span class="filter-chip-label">🗓️ Chi Tiết Kỳ</span>
+          <select id="f-subperiod" class="filter-select" onchange="render()" disabled><option value="ALL">Tất cả (Cả năm)</option></select>
+        </div>
+        <div>
+          <span class="filter-chip-label">🏭 Tình Trạng SX</span>
+          <select id="f-status" class="filter-select" onchange="render()"><option value="ALL">Tất cả tình trạng</option></select>
+        </div>
+        <div>
+          <span class="filter-chip-label">🏢 Bộ Phận KD</span>
+          <select id="f-dept" class="filter-select" onchange="onDeptChange()"><option value="ALL">Tất cả bộ phận</option></select>
+        </div>
+        <div>
+          <span class="filter-chip-label">👤 Nhân Viên KD</span>
+          <select id="f-emp" class="filter-select" onchange="render()"><option value="ALL">Tất cả NVKD</option></select>
+        </div>
+      </div>
+    </div>
 
-def clean_number(val):
-    if pd.isna(val) or val is None:
-        return 0.0
-    val_str = str(val).strip().replace('\\xa0', '').replace(' ', '')
-    if not val_str or val_str.lower() in ['nan', 'none', 'null', '-', '']:
-        return 0.0
-    if '.' in val_str and ',' in val_str:
-        val_str = val_str.replace('.', '').replace(',', '.')
-    elif ',' in val_str:
-        val_str = val_str.replace(',', '.')
-    elif '.' in val_str:
-        parts = val_str.split('.')
-        if len(parts) > 1 and len(parts[-1]) == 3:
-            val_str = val_str.replace('.', '')
-    try:
-        return float(val_str)
-    except Exception:
-        return 0.0
+    <!-- TABS SẢN PHẨM -->
+    <div class="nav-tabs" id="product-tabs"></div>
 
-def clean_status(val):
-    if pd.isna(val) or val is None:
-        return 'Chưa SX'
-    val_str = str(val).strip()
-    val_str = re.sub(r'\\s+', ' ', val_str)
-    if not val_str or val_str.lower() in ['nan', 'none', 'null', '']:
-        return 'Chưa SX'
-    ban_do_chuan_hoa = {
-        'chua sx': 'Chưa SX', 'chưa sx': 'Chưa SX', 'chua sản xuất': 'Chưa SX', 'chưa sản xuất': 'Chưa SX',
-        'dang sx': 'Đang SX', 'đang sx': 'Đang SX', 'dang sản xuất': 'Đang SX', 'đang sản xuất': 'Đang SX',
-        'tam dung sx': 'Tạm Dừng SX', 'tạm dừng sx': 'Tạm Dừng SX', 'tam dung': 'Tạm Dừng SX', 'tạm dừng': 'Tạm Dừng SX',
-        'done': 'Done', 'hoan thanh': 'Done', 'hoàn thành': 'Done',
+    <!-- METRICS -->
+    <div class="metric-grid" id="metrics-container"></div>
+
+    <!-- SUB BAR & SEARCH -->
+    <div class="sub-bar">
+      <div class="sub-tabs" id="sub-tabs-container">
+        <button class="sub-tab-btn active" onclick="setSubTab('MOI')">🆕 Đơn Đặt Mới</button>
+        <button class="sub-tab-btn" onclick="setSubTab('TON')">⌛ Đơn Tồn Cần Giao</button>
+        <button class="sub-tab-btn" onclick="setSubTab('DONE')">✅ Đơn Đã Nhập Kho</button>
+      </div>
+      <div class="actions-wrap">
+        <input type="text" id="search-kw" class="search-box" placeholder="🔍 Nhập Mã ĐH, Dự án..." oninput="renderTable()">
+        <button class="btn-export" onclick="exportExcel()">📥 Xuất Excel</button>
+      </div>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU -->
+    <div class="table-container">
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th>Mã ĐH</th>
+            <th>Bộ Phận</th>
+            <th>NVKD</th>
+            <th>Dự Án</th>
+            <th>Quy Cách</th>
+            <th>ĐVT</th>
+            <th>Số Lượng</th>
+            <th>🚨 Cảnh Báo Tiến Độ</th>
+            <th>Trạng Thái</th>
+            <th>Duyệt Base SX</th>
+            <th>KD Cần Ngày Giao Hàng</th>
+            <th>Chốt Tiến Độ Giao Hàng VHIP-KD</th>
+            <th>Ngày Nhập Kho Thực Tế</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="loading" style="display: none;">Đang kết nối dữ liệu từ Google Sheets, vui lòng đợi...</div>
+
+  <script>
+    const GGS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/export?format=csv&gid=984933238";
+    let rawData = [];
+    let currentTab = 0;
+    let currentSubTab = 'MOI';
+
+    const TABS = [
+      { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH" },
+      { name: "🚨 Chưa Chốt Tiến Độ Giao Hàng", col: "So_Luong_Tong_DH" },
+      { name: "📦 Gối Chậu", col: "SL_GoiChau" },
+      { name: "⚙️ Khe Răng Lược", col: "SL_KheRangLuoc" },
+      { name: "🧱 Tấm VCO", col: "SL_TamVCO" },
+      { name: "🏗️ Cột H (Phụ Kiện)", col: "SL_HeCotPhuKien" },
+      { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac" }
+    ];
+
+    // XỬ LÝ ĐĂNG NHẬP
+    if (sessionStorage.getItem('vhip_logged_in') === 'true') showApp();
+
+    function handleLogin() {
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value.trim();
+      if (u === "VHIP" && p === "1") {
+        sessionStorage.setItem('vhip_logged_in', 'true');
+        showApp();
+      } else {
+        document.getElementById('login-err').style.display = 'block';
+      }
     }
-    return ban_do_chuan_hoa.get(val_str.lower(), val_str)
-
-def chuan_hoa_ten_nv(ten):
-    if pd.isna(ten) or ten is None:
-        return ''
-    s = str(ten).strip()
-    s_new = re.sub(r'^(mr|ms|mrs)\\.?\\s*', '', s, flags=re.IGNORECASE).strip()
-    s_new = re.sub(r'\\s+', ' ', s_new)
-    return s_new if s_new else s
-
-def tinh_canh_bao_tien_do(row):
-    if row['Da_Nhap_Kho']:
-        return "✅ Đã Hoàn Thành"
-    if pd.isna(row['Ngay_Duyet_AB']):
-        return "⚪ Chưa Duyệt SX (AB trống)"
-    if pd.isna(row['Ngay_Chot_AG']):
-        return "⚠️ Thiếu Ngày Chốt AG"
-
-    ngay_hien_tai = pd.Timestamp.now().normalize()
-    songay_con_lai = (row['Ngay_Chot_AG'] - ngay_hien_tai).days
-
-    if songay_con_lai <= 5:
-        return "🔴 Rất Nguy Hiểm (≤ 5 Ngày)"
-    elif songay_con_lai <= 7:
-        return "🟠 Cấp Bách / Ưu Tiên (6-7 Ngày)"
-    elif songay_con_lai <= 15:
-        return "🟡 Tiến Độ Bình Thường (8-15 Ngày)"
-    elif songay_con_lai <= 30:
-        return "🟢 An Toàn (16-30 Ngày)"
-    else:
-        return "🔵 Rất An Toàn (> 30 Ngày)"
-
-def style_canh_bao(val):
-    if '🔴' in str(val):
-        return 'background-color: #ffc9c9; color: #900C3F; font-weight: bold;'
-    elif '🟠' in str(val):
-        return 'background-color: #ffe5b4; color: #d35400; font-weight: bold;'
-    elif '🟡' in str(val):
-        return 'background-color: #fff9c4; color: #856404;'
-    elif '🟢' in str(val):
-        return 'background-color: #d4edda; color: #155724;'
-    elif '⚪' in str(val):
-        return 'background-color: #e9ecef; color: #6c757d;'
-    return ''
-
-def format_number_smart(val):
-    if pd.isna(val) or val is None:
-        return "0"
-    try:
-        f_val = float(val)
-        if f_val.is_integer():
-            return f"{int(f_val):,}"
-        return f"{f_val:,.2f}"
-    except Exception:
-        return str(val)
-
-def render_pretty_table(df_show, cols, q_col, table_key):
-    label_map = {
-        "So_DH": "Mã ĐH", "Bo_Phan_KD": "Bộ Phận", "NV_KD": "NVKD", "Du_An": "Dự Án",
-        "Quy_Cach": "Quy Cách", "DVT": "ĐVT", q_col: "Số Lượng",
-        "Canh_Bao_Tien_Do": "🚨 Cảnh Báo Tiến Độ", "Trang_Thai_SX": "Trạng Thái",
-        "Ngay_Duyet_AB": "Duyệt Base SX", "Ngay_KD_Can_AC": "KD Cần Ngày Giao Hàng",
-        "Ngay_Chot_AG": "Chốt Tiến Độ Giao Hàng VHIP-KD", "Ngay_NhapKho_DT": "Ngày Nhập Kho Thực Tế"
+    function handleLogout() {
+      sessionStorage.removeItem('vhip_logged_in');
+      location.reload();
+    }
+    function showApp() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      buildTabs();
+      fetchData();
     }
 
-    disp = df_show[cols].copy()
-    for c in ['Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']:
-        if c in disp.columns:
-            disp[c] = disp[c].dt.strftime('%d/%m/%Y').fillna('')
-    if q_col in disp.columns:
-        disp[q_col] = disp[q_col].map(format_number_smart)
+    function buildTabs() {
+      const container = document.getElementById('product-tabs');
+      container.innerHTML = TABS.map((t, idx) => `
+        <button class="tab-btn ${idx === currentTab ? 'active' : ''}" onclick="setTab(${idx})">${t.name}</button>
+      `).join('');
+    }
 
-    disp = disp.rename(columns=label_map)
-    canh_bao_label = label_map.get("Canh_Bao_Tien_Do", "Canh_Bao_Tien_Do")
+    function setTab(idx) {
+      currentTab = idx;
+      buildTabs();
+      render();
+    }
+    function setSubTab(sub) {
+      currentSubTab = sub;
+      document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTable();
+    }
 
-    styler = disp.style.set_uuid(re.sub(r'[^a-zA-Z0-9_-]', '_', str(table_key)))
-    if canh_bao_label in disp.columns:
-        styler = styler.map(style_canh_bao, subset=[canh_bao_label])
+    // LOAD DỮ LIỆU
+    function fetchData() {
+      document.getElementById('loading').style.display = 'block';
+      fetch(GGS_CSV_URL)
+        .then(res => res.text())
+        .then(csv => {
+          const workbook = XLSX.read(csv, { type: 'string' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          parseData(json);
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('update-badge').innerText = `🔄 Cập nhật: ${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')}`;
+        })
+        .catch(err => {
+          alert("Lỗi tải dữ liệu Google Sheets: " + err);
+          document.getElementById('loading').style.display = 'none';
+        });
+    }
 
-    try:
-        styler = styler.hide(axis='index')
-    except Exception:
-        pass
+    function parseNum(val) {
+      if (!val) return 0;
+      let s = String(val).replace(/\s/g, '').replace(/\xa0/g, '');
+      if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+      else if (s.includes(',')) s = s.replace(',', '.');
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
 
-    if len(disp) == 0:
-        st.markdown('<div class="table-wrap table-empty">Không có dữ liệu phù hợp.</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="table-wrap">{styler.to_html()}</div>', unsafe_allow_html=True)
+    function parseDate(val) {
+      if (!val) return null;
+      const parts = String(val).trim().split(/[\/\-]/);
+      if (parts.length >= 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        return new Date(y, m, d);
+      }
+      return null;
+    }
 
-def convert_df_to_excel_by_product(df_moi, df_ton, df_done, cols, ten_ky, ten_san_pham):
-    output = io.BytesIO()
-    clean_sp = re.sub(r'[\\/\\\\\\?\\*\\:\\[\\]]', '-', str(ten_san_pham)).strip()
-    sheet_moi = f"Đặt mới {clean_sp}"[:31]
-    sheet_ton = f"Tồn {clean_sp}"[:31]
-    sheet_done = f"Nhập kho {clean_sp}"[:31]
+    function parseData(rows) {
+      rawData = [];
+      let lastDH = '';
+      for (let r = 3; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length === 0) continue;
+        let dh = String(row[1] || '').trim();
+        if (dh) lastDH = dh; else dh = lastDH;
+        if (!dh || /Tổng|Tong|STT|Số ĐH/i.test(dh)) continue;
 
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_moi[cols].to_excel(writer, index=False, sheet_name=sheet_moi)
-        df_ton[cols].to_excel(writer, index=False, sheet_name=sheet_ton)
-        df_done[cols].to_excel(writer, index=False, sheet_name=sheet_done)
-    return output.getvalue()
+        let status = String(row[2] || '').trim();
+        let namRaw = String(row[3] || '2026').trim();
+        let dept = String(row[4] || 'Chưa phân loại').trim();
+        let emp = String(row[6] || 'Chưa phân loại').replace(/^(mr|ms|mrs)\.?\s*/i, '').trim();
+        let project = String(row[7] || '');
+        let spec = String(row[9] || '');
+        let unit = String(row[10] || 'cái');
 
-@st.cache_data(ttl=180, show_spinner=False)
-def load_data():
-    df_raw = pd.read_csv(GGS_URL, header=None, dtype=str)
+        let dGui = parseDate(row[26]);
+        let dAB = parseDate(row[27]);
+        let dAC = parseDate(row[28]);
+        let dAG = parseDate(row[32]);
+        let dNK = parseDate(row[33]);
 
-    df = pd.DataFrame()
-    df['So_DH'] = df_raw.iloc[3:, 1].replace('', None).ffill()
-    df['Trang_Thai_SX'] = df_raw.iloc[3:, 2].apply(clean_status)
-    df['Nam_DatHang_Raw'] = df_raw.iloc[3:, 3].fillna('2026').astype(str).str.strip()
-    df['Bo_Phan_KD'] = df_raw.iloc[3:, 4].astype(str).str.strip().fillna('Chưa phân loại')
-    df['NV_KD'] = df_raw.iloc[3:, 6].astype(str).str.strip().fillna('Chưa phân loại')
-    df['NV_KD_ChuanHoa'] = df['NV_KD'].apply(chuan_hoa_ten_nv)
-    df['Du_An'] = df_raw.iloc[3:, 7].fillna('')
-    df['Quy_Cach'] = df_raw.iloc[3:, 9].fillna('')
-    df['DVT'] = df_raw.iloc[3:, 10].fillna('cái')
-    df['So_Luong_Tong_DH_Raw'] = df_raw.iloc[3:, 13]
+        let dDat = dGui || dAG || dAB;
+        let namDat = dDat ? dDat.getFullYear() : (parseInt(namRaw) || 2026);
+        let thangDat = dDat ? dDat.getMonth() + 1 : 1;
 
-    df['SL_KheRangLuoc'] = df_raw.iloc[3:, 14].apply(clean_number)
-    df['SL_GoiChau'] = df_raw.iloc[3:, 15].apply(clean_number)
-    df['SL_TamVCO'] = df_raw.iloc[3:, 23].apply(clean_number)
-    df['SL_HeCotPhuKien'] = df_raw.iloc[3:, 24].apply(clean_number)
+        let slGoi = parseNum(row[15]);
+        let slKhe = parseNum(row[14]);
+        let slVCO = parseNum(row[23]);
+        let slCot = parseNum(row[24]);
+        let slKhac = parseNum(row[16]) + parseNum(row[17]) + parseNum(row[18]) + parseNum(row[19]) + parseNum(row[20]) + parseNum(row[21]) + parseNum(row[22]) + parseNum(row[25]);
+        let slTong = parseNum(row[13]);
+        if (slTong <= 0) slTong = slGoi + slKhe + slVCO + slCot + slKhac;
 
-    df['SL_KheRangLuocNhom'] = df_raw.iloc[3:, 16].apply(clean_number)
-    df['SL_LoXoNeo'] = df_raw.iloc[3:, 17].apply(clean_number)
-    df['SL_ThanhNeo'] = df_raw.iloc[3:, 18].apply(clean_number)
-    df['SL_SPKhac'] = df_raw.iloc[3:, 19].apply(clean_number)
-    df['SL_TamDeNeo'] = df_raw.iloc[3:, 20].apply(clean_number)
-    df['SL_StelPin'] = df_raw.iloc[3:, 21].apply(clean_number)
-    df['SL_VanKhuon'] = df_raw.iloc[3:, 22].apply(clean_number)
-    df['SL_LanCan'] = df_raw.iloc[3:, 25].apply(clean_number)
+        rawData.push({
+          So_DH: dh, Trang_Thai_SX: status, Nam_DatHang: namDat, Thang_DatHang: thangDat,
+          Bo_Phan_KD: dept, NV_KD: emp, Du_An: project, Quy_Cach: spec, DVT: unit,
+          So_Luong_Tong_DH: slTong, SL_GoiChau: slGoi, SL_KheRangLuoc: slKhe, SL_TamVCO: slVCO,
+          SL_HeCotPhuKien: slCot, SL_NhomKhac: slKhac,
+          Ngay_DatHang: dDat, Ngay_Duyet_AB: dAB, Ngay_KD_Can_AC: dAC, Ngay_Chot_AG: dAG, Ngay_NhapKho_DT: dNK,
+          Da_Nhap_Kho: status.toLowerCase() === 'done' || !!dNK
+        });
+      }
+      populateFilterOptions();
+      render();
+    }
 
-    df['Ngay_GuiDH_DT'] = pd.to_datetime(df_raw.iloc[3:, 26], dayfirst=True, errors='coerce')
-    df['Ngay_Duyet_AB'] = pd.to_datetime(df_raw.iloc[3:, 27], dayfirst=True, errors='coerce')
-    df['Ngay_KD_Can_AC'] = pd.to_datetime(df_raw.iloc[3:, 28], dayfirst=True, errors='coerce')
-    df['Ngay_Chot_AG'] = pd.to_datetime(df_raw.iloc[3:, 32], dayfirst=True, errors='coerce')
-    df['Ngay_NhapKho_DT'] = pd.to_datetime(df_raw.iloc[3:, 33], dayfirst=True, errors='coerce')
+    function populateFilterOptions() {
+      const depts = [...new Set(rawData.map(d => d.Bo_Phan_KD).filter(Boolean))].sort();
+      const sDept = document.getElementById('f-dept');
+      sDept.innerHTML = `<option value="ALL">Tất cả bộ phận</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
 
-    df = df[df['So_DH'].notna()]
-    df = df[~df['So_DH'].astype(str).str.contains('Tổng|Tong|STT|Số ĐH', case=False, na=False)]
+      const statuses = [...new Set(rawData.map(d => d.Trang_Thai_SX).filter(s => s && s.toLowerCase() !== 'vhip'))].sort();
+      const sStatus = document.getElementById('f-status');
+      sStatus.innerHTML = `<option value="ALL">Tất cả tình trạng</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
 
-    df['So_Luong_Tong_DH'] = df['So_Luong_Tong_DH_Raw'].apply(clean_number)
-    df['SL_NhomKhac'] = (
-        df['SL_KheRangLuocNhom'] + df['SL_LoXoNeo'] + df['SL_ThanhNeo'] +
-        df['SL_SPKhac'] + df['SL_TamDeNeo'] + df['SL_StelPin'] +
-        df['SL_VanKhuon'] + df['SL_LanCan']
-    )
-    df['SL_TongCalculated'] = df['SL_KheRangLuoc'] + df['SL_GoiChau'] + df['SL_TamVCO'] + df['SL_HeCotPhuKien'] + df['SL_NhomKhac']
-    df.loc[df['So_Luong_Tong_DH'] <= 0, 'So_Luong_Tong_DH'] = df.loc[df['So_Luong_Tong_DH'] <= 0, 'SL_TongCalculated']
+      onDeptChange();
+    }
 
-    df['Ngay_DatHang_DT'] = df['Ngay_GuiDH_DT'].fillna(df['Ngay_Chot_AG']).fillna(df['Ngay_Duyet_AB'])
-    df['Nam_DatHang'] = df['Ngay_DatHang_DT'].dt.year.fillna(pd.to_numeric(df['Nam_DatHang_Raw'], errors='coerce')).fillna(2026).astype(int)
-    df['Thang_DatHang'] = df['Ngay_DatHang_DT'].dt.month.fillna(1).astype(int)
-    df['Da_Nhap_Kho'] = (df['Trang_Thai_SX'].str.lower() == 'done') | (df['Ngay_NhapKho_DT'].notna())
-    df['Ngay_NK_Check'] = df['Ngay_NhapKho_DT']
-    df['Canh_Bao_Tien_Do'] = df.apply(tinh_canh_bao_tien_do, axis=1)
+    function onDeptChange() {
+      const dept = document.getElementById('f-dept').value;
+      const emps = [...new Set(rawData.filter(d => dept === 'ALL' || d.Bo_Phan_KD === dept).map(d => d.NV_KD).filter(Boolean))].sort();
+      const sEmp = document.getElementById('f-emp');
+      sEmp.innerHTML = `<option value="ALL">Tất cả NVKD</option>` + emps.map(e => `<option value="${e}">${e}</option>`).join('');
+      render();
+    }
 
-    return df
+    function onPeriodChange() {
+      const p = document.getElementById('f-period').value;
+      const sub = document.getElementById('f-subperiod');
+      if (p === 'MONTH') {
+        sub.disabled = false;
+        sub.innerHTML = Array.from({length: 12}, (_, i) => `<option value="${i+1}">Tháng ${i+1}</option>`).join('');
+        sub.value = (new Date().getMonth() + 1);
+      } else if (p === 'QUARTER') {
+        sub.disabled = false;
+        sub.innerHTML = [1,2,3,4].map(q => `<option value="${q}">Quý ${q}</option>`).join('');
+        sub.value = 3;
+      } else {
+        sub.disabled = true;
+        sub.innerHTML = `<option value="ALL">Tất cả (Cả năm)</option>`;
+      }
+      render();
+    }
 
-# 3. GIAO DIỆN CHÍNH
-def render_dashboard():
-    thoi_gian_cap_nhat = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    let filteredMoi = [], filteredTon = [], filteredDone = [], filteredChuaChot = [];
 
-    col_badge, col_refresh = st.columns([5, 1])
-    with col_badge:
-        st.markdown(f'<div class="update-badge">🔄 Cập nhật lúc: {thoi_gian_cap_nhat}</div>', unsafe_allow_html=True)
-    with col_refresh:
-        if st.button("⚡ Làm Mới Ngay", use_container_width=True, key="btn_lam_moi_ngay"):
-            load_data.clear()
+    function render() {
+      const y = document.getElementById('f-year').value;
+      const p = document.getElementById('f-period').value;
+      const sub = document.getElementById('f-subperiod').value;
+      const st = document.getElementById('f-status').value;
+      const dept = document.getElementById('f-dept').value;
+      const emp = document.getElementById('f-emp').value;
 
-    st.markdown('<div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>', unsafe_allow_html=True)
+      let yearEff = y === 'ALL' ? 2026 : parseInt(y);
+      let startDate, endDate;
 
-    try:
-        df = load_data()
+      if (p === 'MONTH') {
+        const m = parseInt(sub);
+        startDate = new Date(yearEff, m - 1, 1);
+        endDate = new Date(yearEff, m, 0, 23, 59, 59);
+      } else if (p === 'QUARTER') {
+        const q = parseInt(sub);
+        startDate = new Date(yearEff, (q - 1) * 3, 1);
+        endDate = new Date(yearEff, q * 3, 0, 23, 59, 59);
+      } else {
+        startDate = new Date(yearEff, 0, 1);
+        endDate = new Date(yearEff, 11, 31, 23, 59, 59);
+      }
 
-        with st.container(border=True):
-            st.markdown('<div class="sub-title-clean">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>', unsafe_allow_html=True)
-            f1, f2, f3, f4, f5, f6 = st.columns(6)
+      let base = rawData.filter(d => {
+        if (dept !== 'ALL' && d.Bo_Phan_KD !== dept) return false;
+        if (emp !== 'ALL' && d.NV_KD !== emp) return false;
+        return true;
+      });
 
-            with f1:
-                st.markdown('<div class="filter-chip-label">📅 Chọn Năm</div>', unsafe_allow_html=True)
-                nam_list = ['Tất cả các năm'] + sorted(list(df['Nam_DatHang'].unique()))
-                nam_sel = st.selectbox("Năm", nam_list, index=nam_list.index(2026) if 2026 in nam_list else 0, label_visibility="collapsed")
+      filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= startDate && d.Ngay_DatHang <= endDate);
+      filteredTon = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang < startDate && (!d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate)));
+      filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate && d.Ngay_NhapKho_DT <= endDate);
 
-            with f2:
-                st.markdown('<div class="filter-chip-label">⏱️ Kỳ Báo Cáo</div>', unsafe_allow_html=True)
-                ky_sel = st.selectbox("Kỳ", ["Theo Tháng", "Theo Quý", "Cả Năm"], index=2, label_visibility="collapsed")
+      if (st !== 'ALL') {
+        const matchStatus = d => st.toLowerCase() === 'đang sx' ? ['đang sx', 'done'].includes(d.Trang_Thai_SX.toLowerCase()) : d.Trang_Thai_SX.toLowerCase() === st.toLowerCase();
+        filteredMoi = filteredMoi.filter(matchStatus);
+        filteredTon = filteredTon.filter(matchStatus);
+        filteredDone = filteredDone.filter(matchStatus);
+      }
 
-            with f3:
-                thang_sel, quy_sel = None, None
-                if ky_sel == "Theo Tháng":
-                    st.markdown('<div class="filter-chip-label">🗓️ Chọn Tháng</div>', unsafe_allow_html=True)
-                    danh_sach_thang = [f"Tháng {m}" for m in range(1, 13)]
-                    thang_chon_str = st.selectbox("Tháng", danh_sach_thang, index=datetime.now().month - 1, label_visibility="collapsed")
-                    thang_sel = int(thang_chon_str.replace("Tháng ", ""))
-                elif ky_sel == "Theo Quý":
-                    st.markdown('<div class="filter-chip-label">📊 Chọn Quý</div>', unsafe_allow_html=True)
-                    quy_chon_str = st.selectbox("Quý", ["Quý 1", "Quý 2", "Quý 3", "Quý 4"], index=2, label_visibility="collapsed")
-                    quy_sel = int(quy_chon_str.replace("Quý ", ""))
-                else:
-                    st.markdown('<div class="filter-chip-label">🗓️ Chi Tiết Kỳ</div>', unsafe_allow_html=True)
-                    st.selectbox("Kỳ chi tiết", ["Tất cả (Cả năm)"], disabled=True, label_visibility="collapsed")
+      // CHƯA CHỐT TIẾN ĐỘ
+      filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG);
 
-            with f4:
-                st.markdown('<div class="filter-chip-label">🏭 Tình Trạng SX</div>', unsafe_allow_html=True)
-                tt_list = ['Tất cả tình trạng'] + sorted([x for x in df['Trang_Thai_SX'].unique() if str(x).strip().lower() != 'vhip'])
-                tt_sel = st.selectbox("Tình trạng", tt_list, label_visibility="collapsed")
+      renderMetrics(startDate, endDate);
+      renderTable();
+    }
 
-            with f5:
-                st.markdown('<div class="filter-chip-label">🏢 Bộ Phận KD</div>', unsafe_allow_html=True)
-                bp_list = ['Tất cả bộ phận'] + sorted([x for x in df['Bo_Phan_KD'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
-                bp_sel = st.selectbox("Bộ phận", bp_list, label_visibility="collapsed")
+    function renderMetrics(startDate, endDate) {
+      const container = document.getElementById('metrics-container');
+      const subTabs = document.getElementById('sub-tabs-container');
+      const qCol = TABS[currentTab].col;
 
-            with f6:
-                st.markdown('<div class="filter-chip-label">👤 Nhân Viên KD</div>', unsafe_allow_html=True)
-                df_nv_scope = df if bp_sel == 'Tất cả bộ phận' else df[df['Bo_Phan_KD'] == bp_sel]
-                nv_list = ['Tất cả NVKD'] + sorted([x for x in df_nv_scope['NV_KD_ChuanHoa'].unique() if str(x) not in ['', 'nan', 'Chưa phân loại']])
-                nv_sel = st.selectbox("NVKD", nv_list, label_visibility="collapsed")
+      if (TABS[currentTab].name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
+        subTabs.style.display = 'none';
+        const sum = col => filteredChuaChot.reduce((a, b) => a + (b[col] || 0), 0);
+        container.innerHTML = `
+          <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${filteredChuaChot.length.toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${sum('SL_GoiChau').toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${sum('SL_KheRangLuoc').toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${sum('SL_TamVCO').toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${sum('SL_HeCotPhuKien').toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${sum('SL_NhomKhac').toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${sum('So_Luong_Tong_DH').toLocaleString()}</div></div>
+        `;
+      } else {
+        subTabs.style.display = 'flex';
+        let subM = currentTab === 0 ? filteredMoi : filteredMoi.filter(d => d[qCol] > 0);
+        let subT = currentTab === 0 ? filteredTon : filteredTon.filter(d => d[qCol] > 0);
+        let subD = currentTab === 0 ? filteredDone : filteredDone.filter(d => d[qCol] > 0);
 
-        df_base = df.copy()
-        if bp_sel != 'Tất cả bộ phận':
-            df_base = df_base[df_base['Bo_Phan_KD'] == bp_sel]
-        if nv_sel != 'Tất cả NVKD':
-            df_base = df_base[df_base['NV_KD_ChuanHoa'] == nv_sel]
+        let tonCan = subT.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
+        let moiCan = subM.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
 
-        nam_eff = 2026 if nam_sel == 'Tất cả các năm' else int(nam_sel)
-        if ky_sel == "Theo Tháng" and thang_sel:
-            start_date = pd.Timestamp(year=nam_eff, month=thang_sel, day=1)
-            end_date = start_date + pd.offsets.MonthEnd(1)
-            ten_ky_hien_thi = f"Tháng {thang_sel}/{nam_eff}"
-        elif ky_sel == "Theo Quý" and quy_sel:
-            start_month = (quy_sel - 1) * 3 + 1
-            start_date = pd.Timestamp(year=nam_eff, month=start_month, day=1)
-            end_date = start_date + pd.DateOffset(months=3) - pd.Timedelta(days=1)
-            ten_ky_hien_thi = f"Quý {quy_sel}/{nam_eff}"
-        else:
-            start_date = pd.Timestamp(year=nam_eff, month=1, day=1)
-            end_date = pd.Timestamp(year=nam_eff, month=12, day=31)
-            ten_ky_hien_thi = f"Năm {nam_eff}"
+        const sumCol = arr => arr.reduce((a, b) => a + (b[qCol] || 0), 0);
+        const khongTamDung = arr => arr.filter(d => !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
+        const tonDong = arr => arr.filter(d => !(d.Da_Nhap_Kho && d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT <= endDate));
 
-        cond_dat_moi = (df_base['Ngay_DatHang_DT'] >= start_date) & (df_base['Ngay_DatHang_DT'] <= end_date)
-        df_moi = df_base[cond_dat_moi].copy()
-        cond_dat_truoc = (df_base['Ngay_DatHang_DT'] < start_date)
-        cond_chua_nk_truoc_ky = (~df_base['Da_Nhap_Kho']) | (df_base['Ngay_NK_Check'] >= start_date)
-        df_ton = df_base[cond_dat_truoc & cond_chua_nk_truoc_ky].copy()
-        cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
-        df_done = df_base[cond_nhap_kho_trong_ky].copy()
+        container.innerHTML = `
+          <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${sumCol(subM).toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${sumCol(moiCan).toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${sumCol(tonCan).toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan))).toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${sumCol(subD).toLocaleString()}</div></div>
+          <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan)))).toLocaleString()}</div></div>
+        `;
+      }
+    }
 
-        if tt_sel != 'Tất cả tình trạng':
-            mask_trang_thai = lambda df_x: df_x['Trang_Thai_SX'].str.lower().isin(['đang sx', 'done']) if tt_sel.lower() == 'đang sx' else df_x['Trang_Thai_SX'].str.lower() == tt_sel.lower()
-            df_moi = df_moi[mask_trang_thai(df_moi)]
-            df_ton = df_ton[mask_trang_thai(df_ton)]
-            df_done = df_done[mask_trang_thai(df_done)]
+    function calcCanhBao(d) {
+      if (d.Da_Nhap_Kho) return { text: "✅ Đã Hoàn Thành", cls: "cb-green" };
+      if (!d.Ngay_Duyet_AB) return { text: "⚪ Chưa Duyệt SX (AB trống)", cls: "cb-gray" };
+      if (!d.Ngay_Chot_AG) return { text: "⚠️ Thiếu Ngày Chốt AG", cls: "cb-yellow" };
 
-        st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
+      const diffDays = Math.ceil((d.Ngay_Chot_AG - new Date()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 5) return { text: "🔴 Rất Nguy Hiểm (≤ 5 Ngày)", cls: "cb-red" };
+      if (diffDays <= 7) return { text: "🟠 Cấp Bách / Ưu Tiên (6-7 Ngày)", cls: "cb-orange" };
+      if (diffDays <= 15) return { text: "🟡 Tiến Độ Bình Thường (8-15 Ngày)", cls: "cb-yellow" };
+      if (diffDays <= 30) return { text: "🟢 An Toàn (16-30 Ngày)", cls: "cb-green" };
+      return { text: "🔵 Rất An Toàn (> 30 Ngày)", cls: "" };
+    }
 
-        tab_names = ['📊 Dashboard Tổng', '🚨 Chưa Chốt Tiến Độ Giao Hàng', '📦 Gối Chậu', '⚙️ Khe Răng Lược', '🧱 Tấm VCO', '🏗️ Cột H (Phụ Kiện)', '📋 Sản Phẩm Khác']
-        tabs = st.tabs(tab_names)
-        qty_mapping = {
-            '📦 Gối Chậu': 'SL_GoiChau',
-            '⚙️ Khe Răng Lược': 'SL_KheRangLuoc',
-            '🧱 Tấm VCO': 'SL_TamVCO',
-            '🏗️ Cột H (Phụ Kiện)': 'SL_HeCotPhuKien',
-            '📋 Sản Phẩm Khác': 'SL_NhomKhac'
-        }
+    function fmtDate(d) {
+      if (!d) return '';
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
 
-        for i, tname in enumerate(tab_names):
-            with tabs[i]:
-                ten_sp_thuan = tname.replace('📊 ', '').replace('🚨 ', '').replace('📦 ', '').replace('⚙️ ', '').replace('🧱 ', '').replace('🏗️ ', '').replace('📋 ', '')
+    function getTableData() {
+      const qCol = TABS[currentTab].col;
+      let data = [];
+      if (TABS[currentTab].name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
+        data = filteredChuaChot;
+      } else {
+        if (currentSubTab === 'MOI') data = filteredMoi;
+        else if (currentSubTab === 'TON') data = filteredTon;
+        else data = filteredDone;
+        if (currentTab !== 0) data = data.filter(d => d[qCol] > 0);
+      }
+      const kw = document.getElementById('search-kw').value.trim().toLowerCase();
+      if (kw) {
+        data = data.filter(d => d.So_DH.toLowerCase().includes(kw) || d.Du_An.toLowerCase().includes(kw));
+      }
+      return data;
+    }
 
-                if tname == '🚨 Chưa Chốt Tiến Độ Giao Hàng':
-                    q_col = 'So_Luong_Tong_DH'
-                    df_chua_chot = pd.concat([df_moi, df_ton])
-                    df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
-                    cols_display = ['So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col, 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']
+    function renderTable() {
+      const list = getTableData();
+      const qCol = TABS[currentTab].col;
+      const tbody = document.getElementById('table-body');
 
-                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                    mc0, mc1, mc2, mc3 = st.columns(4)
-                    mc0.metric("📄 ĐH Chưa Chốt", format_number_smart(len(df_chua_chot)))
-                    mc1.metric("📦 Gối Chậu", format_number_smart(df_chua_chot['SL_GoiChau'].sum()))
-                    mc2.metric("⚙️ Khe Răng", format_number_smart(df_chua_chot['SL_KheRangLuoc'].sum()))
-                    mc3.metric("🧱 Tấm VCO", format_number_smart(df_chua_chot['SL_TamVCO'].sum()))
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="padding: 24px; color: #64748b;">Không có dữ liệu phù hợp.</td></tr>`;
+        return;
+      }
 
-                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                    mc4, mc5, mc6 = st.columns(3)
-                    mc4.metric("🏗️ Cột H (Phụ Kiện)", format_number_smart(df_chua_chot['SL_HeCotPhuKien'].sum()))
-                    mc5.metric("📋 Sản Phẩm Khác", format_number_smart(df_chua_chot['SL_NhomKhac'].sum()))
-                    mc6.metric("🎯 Tổng Cộng", format_number_smart(df_chua_chot[q_col].sum()))
+      tbody.innerHTML = list.map(d => {
+        const cb = calcCanhBao(d);
+        return `
+          <tr>
+            <td style="font-weight:700; color:#0d47a1;">${d.So_DH}</td>
+            <td>${d.Bo_Phan_KD}</td>
+            <td>${d.NV_KD}</td>
+            <td class="col-expand" title="${d.Du_An}">${d.Du_An}</td>
+            <td class="col-expand" title="${d.Quy_Cach}">${d.Quy_Cach}</td>
+            <td>${d.DVT}</td>
+            <td style="font-weight:700;">${(d[qCol] || 0).toLocaleString()}</td>
+            <td class="${cb.cls}">${cb.text}</td>
+            <td>${d.Trang_Thai_SX}</td>
+            <td>${fmtDate(d.Ngay_Duyet_AB)}</td>
+            <td>${fmtDate(d.Ngay_KD_Can_AC)}</td>
+            <td>${fmtDate(d.Ngay_Chot_AG)}</td>
+            <td>${fmtDate(d.Ngay_NhapKho_DT)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
 
-                    st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
-                    
-                    col_search, col_export, _ = st.columns([1.8, 1.4, 2.8])
-                    with col_search:
-                        st.markdown('<div class="search-input-wrap">', unsafe_allow_html=True)
-                        search_kw = st.text_input("Tìm:", placeholder="🔍 Nhập Mã ĐH, Dự án...", key=f"s_{i}", label_visibility="collapsed")
-                        st.markdown('</div>', unsafe_allow_html=True)
+    function exportExcel() {
+      const list = getTableData();
+      const qCol = TABS[currentTab].col;
+      const exportRows = list.map(d => ({
+        "Mã ĐH": d.So_DH, "Bộ Phận": d.Bo_Phan_KD, "NVKD": d.NV_KD, "Dự Án": d.Du_An,
+        "Quy Cách": d.Quy_Cach, "ĐVT": d.DVT, "Số Lượng": d[qCol] || 0,
+        "Cảnh Báo": calcCanhBao(d).text, "Trạng Thái": d.Trang_Thai_SX,
+        "Duyệt Base SX": fmtDate(d.Ngay_Duyet_AB), "KD Cần Ngày Giao Hàng": fmtDate(d.Ngay_KD_Can_AC),
+        "Chốt Tiến Độ": fmtDate(d.Ngay_Chot_AG), "Ngày Nhập Kho": fmtDate(d.Ngay_NhapKho_DT)
+      }));
 
-                    df_show = df_chua_chot[df_chua_chot['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else df_chua_chot
-
-                    with col_export:
-                        excel_buf = io.BytesIO()
-                        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
-                            df_show[cols_display].to_excel(writer, index=False, sheet_name="Chua Chot Tien Do")
-                        st.download_button(
-                            label="📥 Xuất Excel (Chưa Chốt)",
-                            data=excel_buf.getvalue(),
-                            file_name=f"Chua_Chot_Tien_Do_{re.sub(r'[\\/\\\\\\?\\*\\:\\[\\]]', '-', ten_ky_hien_thi)}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            key=f"btn_ex_{i}"
-                        )
-
-                    render_pretty_table(df_show, cols_display, q_col, f"chuachot_{i}")
-                    continue
-
-                q_col = 'So_Luong_Tong_DH' if tname == '📊 Dashboard Tổng' else qty_mapping[tname]
-                sub_moi = df_moi if tname == '📊 Dashboard Tổng' else df_moi[df_moi[q_col] > 0]
-                sub_ton = df_ton if tname == '📊 Dashboard Tổng' else df_ton[df_ton[q_col] > 0]
-                sub_done = df_done if tname == '📊 Dashboard Tổng' else df_done[df_done[q_col] > 0]
-
-                cols_display = ['So_DH', 'Bo_Phan_KD', 'NV_KD', 'Du_An', 'Quy_Cach', 'DVT', q_col, 'Canh_Bao_Tien_Do', 'Trang_Thai_SX', 'Ngay_Duyet_AB', 'Ngay_KD_Can_AC', 'Ngay_Chot_AG', 'Ngay_NhapKho_DT']
-
-                sub_ton_can = sub_ton[sub_ton['Ngay_KD_Can_AC'].isna() | ((sub_ton['Ngay_KD_Can_AC'] >= start_date) & (sub_ton['Ngay_KD_Can_AC'] <= end_date))]
-                sub_moi_can = sub_moi[sub_moi['Ngay_KD_Can_AC'].isna() | ((sub_moi['Ngay_KD_Can_AC'] >= start_date) & (sub_moi['Ngay_KD_Can_AC'] <= end_date))]
-                
-                _khong_tam_dung = lambda d: d[~d['Trang_Thai_SX'].astype(str).str.lower().str.contains('tạm dừng', na=False)]
-                _ton_dong = lambda d: d[~(d['Da_Nhap_Kho'] & d['Ngay_NhapKho_DT'].notna() & (d['Ngay_NhapKho_DT'] <= end_date))]
-
-                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                m1, m2, m3 = st.columns(3)
-                m1.metric(f"📦 Đặt Mới {ten_ky_hien_thi}", format_number_smart(sub_moi[q_col].sum()))
-                m2.metric("🔥 Đặt & Cần Giao", format_number_smart(sub_moi_can[q_col].sum()))
-                m3.metric("⏳ Tồn Lũy Kế", format_number_smart(sub_ton_can[q_col].sum()))
-
-                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                m4, m5, m6 = st.columns(3)
-                m4.metric("🎯 Tổng Cần SX", format_number_smart(_khong_tam_dung(sub_moi_can)[q_col].sum() + _khong_tam_dung(sub_ton_can)[q_col].sum()))
-                m5.metric("✅ Đã Nhập Kho", format_number_smart(sub_done[q_col].sum()))
-                m6.metric("⚠️ Còn Phải SX", format_number_smart(_khong_tam_dung(_ton_dong(sub_moi_can))[q_col].sum() + _khong_tam_dung(_ton_dong(sub_ton_can))[q_col].sum()))
-
-                st.markdown('<hr class="soft-divider">', unsafe_allow_html=True)
-
-                col_s, col_e, _ = st.columns([1.8, 1.4, 2.8])
-                with col_s:
-                    st.markdown('<div class="search-input-wrap">', unsafe_allow_html=True)
-                    search_kw = st.text_input(f"Tìm:", placeholder=f"🔍 Tìm trong {ten_sp_thuan}...", key=f"s_{i}", label_visibility="collapsed")
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                sub_moi_view = sub_moi[sub_moi['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_moi
-                sub_ton_view = sub_ton_can[sub_ton_can['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_ton_can
-                sub_done_view = sub_done[sub_done['So_DH'].astype(str).str.contains(search_kw, case=False, na=False)] if search_kw else sub_done
-
-                with col_e:
-                    excel_data = convert_df_to_excel_by_product(sub_moi_view, sub_ton_view, sub_done_view, cols_display, ten_ky_hien_thi, ten_sp_thuan)
-                    st.download_button(
-                        label=f"📥 Xuất Excel ({ten_sp_thuan})",
-                        data=excel_data,
-                        file_name=f"Bao_Cao_{re.sub(r'[^a-zA-Z0-9_-]', '_', ten_sp_thuan)}_{re.sub(r'[\\/\\\\\\?\\*\\:\\[\\]]', '-', ten_ky_hien_thi)}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                        key=f"btn_ex_{i}"
-                    )
-
-                st1, st2, st3 = st.tabs(["🆕 Đơn Đặt Mới", "⌛ Đơn Tồn Cần Giao", "✅ Đơn Đã Nhập Kho"])
-                with st1:
-                    render_pretty_table(sub_moi_view, cols_display, q_col, f"moi_{i}")
-                with st2:
-                    render_pretty_table(sub_ton_view, cols_display, q_col, f"ton_{i}")
-                with st3:
-                    render_pretty_table(sub_done_view, cols_display, q_col, f"done_{i}")
-
-    except Exception as e:
-        st.error(f"Lỗi kết nối hoặc xử lý dữ liệu: {e}")
-
-# 4. ĐĂNG NHẬP
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    man_hinh_dang_nhap()
-    st.stop()
-
-col_user, col_logout = st.columns([5, 1])
-with col_user:
-    st.markdown("👤 Đã đăng nhập")
-with col_logout:
-    if st.button("🚪 Đăng Xuất", use_container_width=True, key="btn_dangxuat"):
-        st.session_state.logged_in = False
-        st.rerun()
-
-render_dashboard()
-`
-        }
-      }, document.getElementById("root"))
-    </script>
-  </body>
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao");
+      XLSX.writeFile(wb, `Bao_Cao_${TABS[currentTab].name.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`);
+    }
+  </script>
+</body>
 </html>
