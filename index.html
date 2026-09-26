@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VHIP - Quản Lý Tiến Độ & Sản Lượng</title>
+  <title>VHIP - Quản Lý Đơn Hàng & Sản Lượng</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -30,27 +30,27 @@
       text-align: center;
     }
     .auth-logo-box {
-      width: 150px;
+      width: 160px;
       margin: 0 auto 16px;
       background: #ffffff;
       border: 1px solid #f1f5f9;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
       border-radius: 16px;
-      padding: 10px 14px;
+      padding: 12px 14px 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
     .auth-logo-svg {
-      width: 48px;
+      width: 58px;
       height: 48px;
-      margin-bottom: 2px;
+      margin-bottom: 6px;
     }
     .auth-logo-brand {
-      color: #0b459c;
+      color: #0022cc;
       font-weight: 900;
-      letter-spacing: 0.8px;
-      font-size: 13px;
+      letter-spacing: 1px;
+      font-size: 13.5px;
     }
     .auth-title {
       font-size: 17px;
@@ -285,19 +285,47 @@
 </head>
 <body>
 
-  <!-- KHỐI ĐĂNG NHẬP THEO MẪU MỚI -->
+  <!-- KHỐI ĐĂNG NHẬP -->
   <div id="login-wrapper">
     <div class="auth-card">
       <div class="auth-logo-box">
-        <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 15L85 35V65L50 85L15 65V35L50 15Z" stroke="#0052cc" stroke-width="6" fill="#f8fafc"/>
-          <path d="M50 15L50 85M15 35L85 65M15 65L85 35" stroke="#00c853" stroke-width="4"/>
-          <polygon points="50,30 70,42 70,58 50,70 30,58 30,42" fill="#0052cc" opacity="0.15"/>
+        <!-- LOGO VĨNH HƯNG VECTOR CHUẨN XÁC THEO MẪU GỐC -->
+        <svg class="auth-logo-svg" viewBox="0 0 100 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Các mặt khối màu xanh lá chuối tươi -->
+          <polygon points="12,38 27,46 27,61 12,53" fill="#2fe600" />
+          <polygon points="42,38 27,46 27,61 42,53" fill="#62f538" />
+          
+          <polygon points="27,61 50,74 50,60 27,46" fill="#2fe600" />
+          <polygon points="73,61 50,74 50,60 73,46" fill="#62f538" />
+
+          <polygon points="88,38 73,46 73,61 88,53" fill="#62f538" />
+          <polygon points="58,38 73,46 73,61 58,53" fill="#2fe600" />
+
+          <!-- Các đường khung viền màu xanh dương đậm hình 3 khối tạo dáng trái tim -->
+          <g stroke="#0022cc" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Khối bên trái -->
+            <polygon points="27,10 50,23 27,36 4,23" fill="none"/>
+            <line x1="4" y1="23" x2="4" y2="48" />
+            <line x1="50" y1="23" x2="50" y2="48" />
+            <line x1="27" y1="36" x2="27" y2="61" />
+            <polyline points="4,48 27,61 50,48" fill="none"/>
+
+            <!-- Khối bên phải -->
+            <polygon points="73,10 96,23 73,36 50,23" fill="none"/>
+            <line x1="96" y1="23" x2="96" y2="48" />
+            <line x1="73" y1="36" x2="73" y2="61" />
+            <polyline points="50,48 73,61 96,48" fill="none"/>
+
+            <!-- Đáy khối trung tâm phía dưới -->
+            <polyline points="27,61 50,74 73,61" fill="none"/>
+            <line x1="50" y1="48" x2="50" y2="74" />
+          </g>
         </svg>
+
         <span class="auth-logo-brand">VĨNH HƯNG<sup>®</sup></span>
       </div>
 
-      <div class="auth-title">VHIP – Quản lý NVL</div>
+      <div class="auth-title">VHIP – Quản lý Đơn hàng</div>
       <div class="auth-sub">Đăng nhập để tiếp tục</div>
 
       <!-- Tab chọn Đăng nhập / Đăng ký -->
@@ -306,7 +334,7 @@
         <button id="btn-mode-reg" onclick="switchMode('reg')">Đăng ký tài khoản</button>
       </div>
 
-      <!-- Khung thông báo lỗi / trạng thái -->
+      <!-- Khung thông báo lỗi / trạng thái chờ duyệt -->
       <div id="auth-alert" class="auth-alert"></div>
 
       <!-- Form Đăng Nhập / Đăng Ký -->
@@ -470,12 +498,12 @@
         return;
       }
 
-      // Giữ tài khoản demo cũ (VHIP/1) và thêm tài khoản theo ảnh (namvt@vinhhungjsc.com/123456)
+      // Đăng nhập hệ thống (VHIP/1 hoặc namvt@vinhhungjsc.com/123456)
       if ((u === "VHIP" && p === "1") || (u === "namvt@vinhhungjsc.com" && p === "123456")) {
         sessionStorage.setItem('vhip_logged_in', 'true');
         showApp();
       } else if (u.includes("@") && p !== "") {
-        // Mô phỏng đúng thông báo tài khoản đang chờ duyệt theo ảnh
+        // Thông báo chờ duyệt chính xác như ảnh
         showAlert("Tài khoản đã xác thực email và đang chờ quản trị viên phê duyệt.");
       } else {
         showAlert("Tên đăng nhập hoặc mật khẩu không chính xác!");
@@ -499,7 +527,7 @@
       showApp();
     }
 
-    /* ================= LOGIC DỮ LIỆU & DASHBOARD GỐC ================= */
+    /* ================= LOGIC DỮ LIỆU & DASHBOARD GỐC (GIỮ NGUYÊN 100%) ================= */
     const GGS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/export?format=csv&gid=984933238";
     let rawData = [];
     let currentTab = 0;
