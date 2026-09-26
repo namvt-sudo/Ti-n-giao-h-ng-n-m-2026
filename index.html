@@ -709,11 +709,11 @@
         let status = clean_status(row[2]);    // Cột C: Tình trạng sản xuất
         let namCotD = String(row[3] || '').trim(); // Cột D: Năm
 
-        // CỐ ĐỊNH CHÍNH XÁC CỘT E LÀ BỘ PHẬN KD
+        // CỘT E: Bộ phận KD[cite: 1]
         let dept = String(row[4] || '').trim();
         if (!dept) dept = 'Bộ phận KD';
 
-        // CỐ ĐỊNH CHÍNH XÁC CỘT G LÀ NHÂN VIÊN KD (Giữ nguyên văn tuyệt đối tên nhân sự)
+        // CỘT G: Nhân viên KD (Giữ nguyên văn tuyệt đối tên)[cite: 1]
         let empRaw = String(row[6] || '').trim();
         let emp = chuan_hoa_ten_nv(empRaw);
         if (!emp) emp = 'Chung';
@@ -800,19 +800,17 @@
       const sDept = document.getElementById('f-dept');
       sDept.innerHTML = `<option value="ALL">Tất cả bộ phận</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
 
+      // Nạp danh sách gợi ý nhân viên KD vào datalist (gộp toàn bộ các biến thể để gợi ý)
+      const emps = [...new Set(rawData.map(d => d.NV_KD).filter(e => e && e !== 'Chung'))].sort();
+      const datalistEmp = document.getElementById('nvkd-list');
+      datalistEmp.innerHTML = emps.map(e => `<option value="${e}"></option>`).join('');
+
       const statuses = [...new Set(rawData.map(d => d.Trang_Thai_SX).filter(s => s && s.toLowerCase() !== 'vhip'))].sort();
       const sStatus = document.getElementById('f-status');
       sStatus.innerHTML = `<option value="ALL">Tất cả tình trạng</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
-
-      onDeptChange();
     }
 
     function onDeptChange() {
-      const dept = document.getElementById('f-dept').value;
-      const emps = [...new Set(rawData.filter(d => dept === 'ALL' || d.Bo_Phan_KD === dept).map(d => d.NV_KD).filter(e => e && e !== 'Chung'))].sort();
-      
-      const datalistEmp = document.getElementById('nvkd-list');
-      datalistEmp.innerHTML = emps.map(e => `<option value="${e}"></option>`).join('');
       render();
     }
 
@@ -849,11 +847,16 @@
       const sub = document.getElementById('f-subperiod').value;
       const st = document.getElementById('f-status').value;
       const dept = document.getElementById('f-dept').value;
-      const empInput = document.getElementById('f-emp').value.trim().toLowerCase();
+      
+      // TÌM KIẾM MỀM NVKD: Chuẩn hóa từ khóa gõ vào (bỏ dấu chấm và khoảng trắng để bắt trọn mọi biến thể: Mr. Biên, MR Biên, Mr.Biên...)
+      const empInput = document.getElementById('f-emp').value.trim().toLowerCase().replace(/[\.\s]/g, '');
 
       let base = rawData.filter(d => {
         if (dept !== 'ALL' && d.Bo_Phan_KD !== dept) return false;
-        if (empInput && !d.NV_KD.toLowerCase().includes(empInput)) return false;
+        if (empInput) {
+          let cleanEmpName = String(d.NV_KD || '').toLowerCase().replace(/[\.\s]/g, '');
+          if (!cleanEmpName.includes(empInput)) return false;
+        }
         return true;
       });
 
