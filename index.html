@@ -82,7 +82,7 @@
       box-shadow: 0 6px 16px rgba(13,71,161,0.35); transform: translateY(-2px); font-weight: 900;
     }
 
-    /* Metrics Cards */
+    /* Metric Cards */
     .metric-wrapper { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
     .metric-row { display: flex; gap: 12px; justify-content: center; }
     .metric-card {
@@ -331,7 +331,8 @@
 
     function fetchData() {
       document.getElementById('loading').style.display = 'block';
-      fetch(GGS_CSV_URL)
+      // Thêm tham số chống Cache trình duyệt
+      fetch(GGS_CSV_URL + "&_t=" + new Date().getTime())
         .then(res => res.text())
         .then(csv => {
           const workbook = XLSX.read(csv, { type: 'string' });
@@ -347,23 +348,29 @@
         });
     }
 
-    // ================= XỬ LÝ CHUẨN XÁC THEO ĐỊNH DẠNG VIỆT NAM =================
-    // Ví dụ GGS: "180,00" -> 180 | "2.366,00" -> 2366 | "18,26" -> 18.26
+    // ================= XỬ LÝ CHUẨN XÁC DỨT ĐIỂM SỐ LƯỢNG =================
     function parseNum(val, allowDecimal = false) {
       if (val === null || val === undefined || val === '') return 0;
       let s = String(val).trim().replace(/\s/g, '').replace(/\xa0/g, '');
       if (!s || /^(nan|none|null|-)$/i.test(s)) return 0;
 
-      // Xóa dấu chấm phân cách hàng nghìn (2.366,00 -> 2366,00)
-      s = s.replace(/\./g, '');
+      // Xóa bỏ hoàn toàn đuôi ,00 hoặc .00 (ví dụ 98.00 hoặc 98,00 -> 98)
+      s = s.replace(/[\.\,]00$/, '');
 
-      // Chuyển dấu phẩy thành dấu chấm để máy tính hiểu
-      s = s.replace(/,/g, '.');
+      // Nếu có cả chấm và phẩy: ví dụ 2.366,50 -> 2366.50
+      if (s.includes('.') && s.includes(',')) {
+        if (s.indexOf('.') < s.indexOf(',')) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          s = s.replace(/,/g, '');
+        }
+      } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+      }
 
       let n = parseFloat(s);
       if (isNaN(n)) return 0;
 
-      // Nếu không phải là khe răng lược thì luôn làm tròn/lấy số nguyên
       return allowDecimal ? n : Math.round(n);
     }
 
@@ -407,15 +414,12 @@
         let namDat = dDat ? dDat.getFullYear() : (parseInt(namRaw) || 2026);
         let thangDat = dDat ? dDat.getMonth() + 1 : 1;
 
-        // Gối chậu, VCO, Cột H, Sản phẩm khác -> số nguyên (false)
         let slGoi = parseNum(row[15], false);
-        // Chỉ DUY NHẤT Khe răng lược -> giữ số lẻ mét (true)
         let slKhe = parseNum(row[14], true);
         let slVCO = parseNum(row[23], false);
         let slCot = parseNum(row[24], false);
         let slKhac = parseNum(row[16], false) + parseNum(row[17], false) + parseNum(row[18], false) + parseNum(row[19], false) + parseNum(row[20], false) + parseNum(row[21], false) + parseNum(row[22], false) + parseNum(row[25], false);
         
-        // Tổng ĐH
         let slTong = parseNum(row[13], true);
         if (slTong <= 0) slTong = slGoi + slKhe + slVCO + slCot + slKhac;
 
@@ -519,18 +523,12 @@
       renderTable();
     }
 
-    // ================= HIỂN THỊ ĐỊNH DẠNG VIỆT NAM (CHẤM PHÂN CÁCH NGÀN, PHẨY THẬP PHÂN) =================
     function fmtSmart(num, isDecimal = false) {
       if (num === null || num === undefined || isNaN(num)) return "0";
       const val = Number(num);
-
-      // Nếu không có phần lẻ hoặc là số nguyên
       if (Number.isInteger(val) || !isDecimal) {
-        // Ví dụ: 2366 -> "2.366" (chuẩn VN)
         return Math.round(val).toLocaleString('vi-VN');
       }
-
-      // Nếu là số lẻ mét (Khe răng lược) ví dụ 18.26 -> "18,26" (chuẩn VN)
       return val.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
     }
 
