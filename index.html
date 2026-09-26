@@ -65,7 +65,7 @@
       background: #ffffff; font-size: 12.5px; font-weight: 700; color: #0d47a1; outline: none; cursor: pointer; box-shadow: 0 1px 4px rgba(13,71,161,0.08);
     }
 
-    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .tab-btn {
       background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 2px solid #93b8f2;
       border-radius: 12px; padding: 7px 14px; color: #0d47a1; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.2s ease-in-out;
@@ -75,6 +75,21 @@
     .tab-btn.active {
       background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8); color: #ffffff; border: 2px solid #0d47a1;
       box-shadow: 0 6px 16px rgba(13,71,161,0.35); transform: translateY(-2px); font-weight: 900;
+    }
+
+    /* THANH CHỌN SẢN PHẨM KHÁC CON */
+    .subproduct-bar {
+      display: none; flex-wrap: wrap; gap: 6px; padding: 6px 12px; background: #e8f1ff;
+      border-radius: 10px; border: 1.5px dashed #93b8f2; margin-bottom: 12px; align-items: center;
+    }
+    .subproduct-label { font-weight: 800; color: #0d47a1; font-size: 12px; margin-right: 4px; }
+    .subprod-chip {
+      background: #ffffff; border: 1.5px solid #93b8f2; padding: 4px 10px; border-radius: 8px;
+      font-size: 12px; font-weight: 700; color: #0d47a1; cursor: pointer; transition: 0.15s;
+    }
+    .subprod-chip:hover { background: #d0e4ff; }
+    .subprod-chip.active {
+      background: #0d47a1; color: #ffffff; border-color: #0d47a1; box-shadow: 0 2px 6px rgba(13,71,161,0.25);
     }
 
     .metric-wrapper { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -214,7 +229,22 @@
       </div>
     </div>
 
+    <!-- TABS CHÍNH -->
     <div class="nav-tabs" id="product-tabs"></div>
+
+    <!-- SUBPRODUCT BAR: CHỌN CHI TIẾT TRONG SẢN PHẨM KHÁC -->
+    <div class="subproduct-bar" id="subproduct-bar">
+      <span class="subproduct-label">🔍 Chi tiết SP Khác:</span>
+      <button class="subprod-chip active" onclick="setSubProduct('ALL')">Tất cả SP Khác</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_TamDeNeo')">Tấm Đế Neo</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_ThanhNeo')">Thanh Neo</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_StelPin')">Stel Pin</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_LoXoNeo')">Lò Xo Neo</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_VanKhuon')">Ván Khuôn</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_LanCan')">Lan Can</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_KheRangLuocNhom')">Khe Nhôm</button>
+      <button class="subprod-chip" onclick="setSubProduct('SL_SPKhac')">SP Khác</button>
+    </div>
 
     <div class="metric-wrapper" id="metrics-container"></div>
 
@@ -263,6 +293,7 @@
     let rawData = [];
     let currentTab = 0;
     let currentSubTab = 'MOI';
+    let currentSubProduct = 'ALL'; // Biến lưu lựa chọn chi tiết Sản Phẩm Khác
 
     const TABS = [
       { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH", isDecimal: false },
@@ -307,8 +338,24 @@
     function setTab(idx) {
       currentTab = idx;
       buildTabs();
+      // Hiện thanh chọn con nếu chọn Tab Sản Phẩm Khác
+      const subBar = document.getElementById('subproduct-bar');
+      if (TABS[idx].name === "📋 Sản Phẩm Khác") {
+        subBar.style.display = 'flex';
+      } else {
+        subBar.style.display = 'none';
+        currentSubProduct = 'ALL';
+      }
       render();
     }
+
+    function setSubProduct(colKey) {
+      currentSubProduct = colKey;
+      document.querySelectorAll('.subprod-chip').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      render();
+    }
+
     function setSubTab(sub) {
       currentSubTab = sub;
       document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -316,7 +363,7 @@
       renderTable();
     }
 
-    // ================= BỘ ĐỌC CSV NGUYÊN BẢN CHUẨN RFC-4180 (GIỐNG HỆT PANDAS DTYPE=STR) =================
+    // BỘ ĐỌC CSV NGUYÊN BẢN CHUẨN RFC-4180
     function parseCSVText(text) {
       let p = '', c = '', r = [];
       let q = false;
@@ -357,13 +404,10 @@
         });
     }
 
-    // ================= SAO CHÉP CHÍNH XÁC 100% HÀM CLEAN_NUMBER CỦA PYTHON =================
     function clean_number(val) {
       if (val === null || val === undefined) return 0.0;
       let val_str = String(val).trim().replace(/\xa0/g, '').replace(/ /g, '');
-      if (!val_str || ['nan', 'none', 'null', '-', ''].includes(val_str.toLowerCase())) {
-        return 0.0;
-      }
+      if (!val_str || ['nan', 'none', 'null', '-', ''].includes(val_str.toLowerCase())) return 0.0;
 
       if (val_str.includes('.') && val_str.includes(',')) {
         val_str = val_str.replace(/\./g, '').replace(',', '.');
@@ -380,13 +424,10 @@
       return isNaN(res) ? 0.0 : res;
     }
 
-    // ================= SAO CHÉP CHÍNH XÁC HÀM CLEAN_STATUS CỦA PYTHON =================
     function clean_status(val) {
       if (val === null || val === undefined) return 'Chưa SX';
       let val_str = String(val).trim().replace(/\s+/g, ' ');
-      if (!val_str || ['nan', 'none', 'null', ''].includes(val_str.toLowerCase())) {
-        return 'Chưa SX';
-      }
+      if (!val_str || ['nan', 'none', 'null', ''].includes(val_str.toLowerCase())) return 'Chưa SX';
       const ban_do = {
         'chua sx': 'Chưa SX', 'chưa sx': 'Chưa SX', 'chua sản xuất': 'Chưa SX', 'chưa sản xuất': 'Chưa SX',
         'dang sx': 'Đang SX', 'đang sx': 'Đang SX', 'dang sản xuất': 'Đang SX', 'đang sản xuất': 'Đang SX',
@@ -430,8 +471,7 @@
         let status = clean_status(row[2]);
         let namRaw = String(row[3] || '2026').trim();
         let dept = String(row[4] || 'Chưa phân loại').trim();
-        let empRaw = String(row[6] || 'Chưa phân loại').trim();
-        let emp = chuan_hoa_ten_nv(empRaw);
+        let emp = chuan_hoa_ten_nv(String(row[6] || 'Chưa phân loại'));
         let project = String(row[7] || '').trim();
         let spec = String(row[9] || '').trim();
         let unit = String(row[10] || 'cái').trim();
@@ -467,7 +507,6 @@
         let namDat = dDat ? dDat.getFullYear() : (parseInt(namRaw) || 2026);
         let thangDat = dDat ? dDat.getMonth() + 1 : 1;
 
-        // Đã nhập kho: (Trang_Thai_SX.lower() == 'done') | (Ngay_NhapKho_DT.notna())
         let daNhapKho = (status.toLowerCase() === 'done') || (dNK !== null);
 
         rawData.push({
@@ -475,6 +514,9 @@
           Bo_Phan_KD: dept, NV_KD: emp, Du_An: project, Quy_Cach: spec, DVT: unit,
           So_Luong_Tong_DH: slTong, SL_GoiChau: slGoi, SL_KheRangLuoc: slKhe, SL_TamVCO: slVCO,
           SL_HeCotPhuKien: slCot, SL_NhomKhac: slKhac,
+          SL_TamDeNeo: slTamDe, SL_ThanhNeo: slThanhNeo, SL_StelPin: slStelPin,
+          SL_LoXoNeo: slLoXo, SL_VanKhuon: slVanKhuon, SL_LanCan: slLanCan,
+          SL_KheRangLuocNhom: slNhomNhom, SL_SPKhac: slSPKhac,
           Ngay_DatHang: dDat, Ngay_Duyet_AB: dAB, Ngay_KD_Can_AC: dAC, Ngay_Chot_AG: dAG, Ngay_NhapKho_DT: dNK,
           Da_Nhap_Kho: daNhapKho
         });
@@ -523,7 +565,14 @@
 
     let filteredMoi = [], filteredTon = [], filteredDone = [], filteredChuaChot = [];
 
-    // ================= SAO CHÉP CHÍNH XÁC LOGIC LỌC KỲ, TỒN, MỚI, NHẬP KHO CỦA PYTHON =================
+    // XÁC ĐỊNH CỘT SỐ LƯỢNG ĐANG CHỌN
+    function getActiveCol() {
+      if (TABS[currentTab].name === "📋 Sản Phẩm Khác" && currentSubProduct !== 'ALL') {
+        return currentSubProduct;
+      }
+      return TABS[currentTab].col;
+    }
+
     function render() {
       const y = document.getElementById('f-year').value;
       const p = document.getElementById('f-period').value;
@@ -554,14 +603,8 @@
         return true;
       });
 
-      // cond_dat_moi = (df_base['Ngay_DatHang_DT'] >= start_date) & (df_base['Ngay_DatHang_DT'] <= end_date)
       filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= startDate && d.Ngay_DatHang <= endDate);
-
-      // cond_dat_truoc = (df_base['Ngay_DatHang_DT'] < start_date)
-      // cond_chua_nk_truoc_ky = (~df_base['Da_Nhap_Kho']) | (df_base['Ngay_NK_Check'] >= start_date)
       filteredTon = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang < startDate && (!d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate)));
-
-      // cond_nhap_kho_trong_ky = (df_base['Ngay_NK_Check'] >= start_date) & (df_base['Ngay_NK_Check'] <= end_date)
       filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate && d.Ngay_NhapKho_DT <= endDate);
 
       if (st !== 'ALL') {
@@ -571,14 +614,12 @@
         filteredDone = filteredDone.filter(matchStatus);
       }
 
-      // df_chua_chot = pd.concat([df_moi, df_ton]); df_chua_chot = df_chua_chot[df_chua_chot['Ngay_Chot_AG'].isna()]
       filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG);
 
       renderMetrics(startDate, endDate);
       renderTable();
     }
 
-    // ================= HÀM FORMAT_NUMBER_SMART CỦA PYTHON =================
     function format_number_smart(val) {
       if (val === null || val === undefined || isNaN(val)) return "0";
       let f_val = parseFloat(val);
@@ -592,7 +633,7 @@
       const container = document.getElementById('metrics-container');
       const subTabs = document.getElementById('sub-tabs-container');
       const currentTabObj = TABS[currentTab];
-      const qCol = currentTabObj.col;
+      const qCol = getActiveCol();
 
       if (currentTabObj.name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
         subTabs.style.display = 'none';
@@ -612,9 +653,9 @@
         `;
       } else {
         subTabs.style.display = 'flex';
-        let subM = currentTab === 0 ? filteredMoi : filteredMoi.filter(d => d[qCol] > 0);
-        let subT = currentTab === 0 ? filteredTon : filteredTon.filter(d => d[qCol] > 0);
-        let subD = currentTab === 0 ? filteredDone : filteredDone.filter(d => d[qCol] > 0);
+        let subM = currentTab === 0 ? filteredMoi : filteredMoi.filter(d => (d[qCol] || 0) > 0);
+        let subT = currentTab === 0 ? filteredTon : filteredTon.filter(d => (d[qCol] || 0) > 0);
+        let subD = currentTab === 0 ? filteredDone : filteredDone.filter(d => (d[qCol] || 0) > 0);
 
         let tonCan = subT.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
         let moiCan = subM.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
@@ -657,7 +698,7 @@
     }
 
     function getTableData() {
-      const qCol = TABS[currentTab].col;
+      const qCol = getActiveCol();
       let data = [];
       if (TABS[currentTab].name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
         data = filteredChuaChot;
@@ -665,7 +706,7 @@
         if (currentSubTab === 'MOI') data = filteredMoi;
         else if (currentSubTab === 'TON') data = filteredTon;
         else data = filteredDone;
-        if (currentTab !== 0) data = data.filter(d => d[qCol] > 0);
+        if (currentTab !== 0) data = data.filter(d => (d[qCol] || 0) > 0);
       }
       const kw = document.getElementById('search-kw').value.trim().toLowerCase();
       if (kw) {
@@ -676,8 +717,7 @@
 
     function renderTable() {
       const list = getTableData();
-      const currentTabObj = TABS[currentTab];
-      const qCol = currentTabObj.col;
+      const qCol = getActiveCol();
       const tbody = document.getElementById('table-body');
 
       if (list.length === 0) {
@@ -709,8 +749,7 @@
 
     function exportExcel() {
       const list = getTableData();
-      const currentTabObj = TABS[currentTab];
-      const qCol = currentTabObj.col;
+      const qCol = getActiveCol();
       const exportRows = list.map(d => ({
         "Mã ĐH": d.So_DH, "Bộ Phận": d.Bo_Phan_KD, "NVKD": d.NV_KD, "Dự Án": d.Du_An,
         "Quy Cách": d.Quy_Cach, "ĐVT": d.DVT, "Số Lượng": d[qCol] || 0,
