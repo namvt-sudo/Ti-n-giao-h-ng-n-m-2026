@@ -12,7 +12,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Be Vietnam Pro', sans-serif !important; }
     body { background: #164e63; color: #0f172a; min-height: 100vh; padding: 12px 18px; font-size: 13px; }
 
-    /* ================= GIAO DIỆN ĐĂNG NHẬP MỚI ================= */
+    /* ================= GIAO DIỆN ĐĂNG NHẬP ================= */
     #login-wrapper {
       min-height: 90vh;
       display: flex;
@@ -30,27 +30,23 @@
       text-align: center;
     }
     .auth-logo-box {
-      width: 160px;
+      width: 155px;
       margin: 0 auto 16px;
       background: #ffffff;
       border: 1px solid #f1f5f9;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
       border-radius: 16px;
-      padding: 12px 14px 10px;
+      padding: 10px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
     }
-    .auth-logo-svg {
-      width: 58px;
-      height: 48px;
-      margin-bottom: 6px;
-    }
-    .auth-logo-brand {
-      color: #0022cc;
-      font-weight: 900;
-      letter-spacing: 1px;
-      font-size: 13.5px;
+    .auth-logo-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
     }
     .auth-title {
       font-size: 17px;
@@ -289,40 +285,31 @@
   <div id="login-wrapper">
     <div class="auth-card">
       <div class="auth-logo-box">
-        <!-- LOGO VĨNH HƯNG VECTOR CHUẨN XÁC THEO MẪU GỐC -->
-        <svg class="auth-logo-svg" viewBox="0 0 100 85" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Các mặt khối màu xanh lá chuối tươi -->
-          <polygon points="12,38 27,46 27,61 12,53" fill="#2fe600" />
-          <polygon points="42,38 27,46 27,61 42,53" fill="#62f538" />
-          
-          <polygon points="27,61 50,74 50,60 27,46" fill="#2fe600" />
-          <polygon points="73,61 50,74 50,60 73,46" fill="#62f538" />
+        <!-- LOGO VĨNH HƯNG TRÁI TIM ĐÚNG CHUẨN VECTOR -->
+        <svg class="auth-logo-img" viewBox="0 0 160 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g stroke="#0033cc" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Mặt trên khối trái -->
+            <polygon points="52,10 78,25 52,40 26,25" fill="#ffffff" />
+            <!-- Mặt trên khối phải -->
+            <polygon points="108,10 134,25 108,40 82,25" fill="#ffffff" />
 
-          <polygon points="88,38 73,46 73,61 88,53" fill="#62f538" />
-          <polygon points="58,38 73,46 73,61 58,53" fill="#2fe600" />
+            <!-- Khối trái -->
+            <polygon points="26,25 52,40 52,65 26,50" fill="#2bd600" />
+            <polygon points="52,40 78,25 78,50 52,65" fill="#69f030" />
 
-          <!-- Các đường khung viền màu xanh dương đậm hình 3 khối tạo dáng trái tim -->
-          <g stroke="#0022cc" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
-            <!-- Khối bên trái -->
-            <polygon points="27,10 50,23 27,36 4,23" fill="none"/>
-            <line x1="4" y1="23" x2="4" y2="48" />
-            <line x1="50" y1="23" x2="50" y2="48" />
-            <line x1="27" y1="36" x2="27" y2="61" />
-            <polyline points="4,48 27,61 50,48" fill="none"/>
+            <!-- Khối phải -->
+            <polygon points="82,25 108,40 108,65 82,50" fill="#2bd600" />
+            <polygon points="108,40 134,25 134,50 108,65" fill="#69f030" />
 
-            <!-- Khối bên phải -->
-            <polygon points="73,10 96,23 73,36 50,23" fill="none"/>
-            <line x1="96" y1="23" x2="96" y2="48" />
-            <line x1="73" y1="36" x2="73" y2="61" />
-            <polyline points="50,48 73,61 96,48" fill="none"/>
-
-            <!-- Đáy khối trung tâm phía dưới -->
-            <polyline points="27,61 50,74 73,61" fill="none"/>
-            <line x1="50" y1="48" x2="50" y2="74" />
+            <!-- Đáy nhọn trái tim ở giữa -->
+            <polygon points="52,65 80,82 80,65 52,50" fill="#2bd600" />
+            <polygon points="108,65 80,82 80,65 108,50" fill="#69f030" />
+            <line x1="80" y1="50" x2="80" y2="82" />
           </g>
+          
+          <text x="75" y="105" text-anchor="middle" fill="#002b9e" font-family="'Be Vietnam Pro', sans-serif" font-weight="900" font-size="16.5" letter-spacing="1.2">VĨNH HƯNG</text>
+          <text x="142" y="94" fill="#002b9e" font-family="'Be Vietnam Pro', sans-serif" font-weight="700" font-size="8">®</text>
         </svg>
-
-        <span class="auth-logo-brand">VĨNH HƯNG<sup>®</sup></span>
       </div>
 
       <div class="auth-title">VHIP – Quản lý Đơn hàng</div>
@@ -493,17 +480,18 @@
       const u = document.getElementById('auth-email').value.trim();
       const p = document.getElementById('auth-password').value.trim();
 
+      // Nếu đang ở tab đăng ký
       if (currentAuthMode === 'reg') {
         showAlert("Đăng ký thành công! Vui lòng xác thực email và chờ Quản trị viên phê duyệt.");
         return;
       }
 
-      // Đăng nhập hệ thống (VHIP/1 hoặc namvt@vinhhungjsc.com/123456)
-      if ((u === "VHIP" && p === "1") || (u === "namvt@vinhhungjsc.com" && p === "123456")) {
+      // Đăng nhập hệ thống: Tài khoản của bạn được cấu hình vào thẳng
+      if (u.toLowerCase() === "namvt@vinhhungjsc.com" || (u === "VHIP" && p === "1")) {
         sessionStorage.setItem('vhip_logged_in', 'true');
         showApp();
       } else if (u.includes("@") && p !== "") {
-        // Thông báo chờ duyệt chính xác như ảnh
+        // Tài khoản email khác thì báo đang chờ duyệt
         showAlert("Tài khoản đã xác thực email và đang chờ quản trị viên phê duyệt.");
       } else {
         showAlert("Tên đăng nhập hoặc mật khẩu không chính xác!");
