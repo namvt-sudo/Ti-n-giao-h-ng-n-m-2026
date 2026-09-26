@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VHIP - Quản Lý Đơn Hàng & Sản Lượng</title>
+  <link rel="icon" type="image/png" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -296,23 +297,19 @@
   <div id="login-wrapper">
     <div class="auth-card">
       <div class="auth-logo-box">
-        <!-- GỌI TRỰC TIẾP FILE ẢNH LOGO.PNG TRÊN GITHUB -->
         <img class="auth-logo-img" src="logo.png" alt="Logo Vĩnh Hưng">
       </div>
 
       <div class="auth-title">VHIP – Quản lý Đơn hàng</div>
       <div class="auth-sub">Đăng nhập để tiếp tục</div>
 
-      <!-- Tab chọn Đăng nhập / Đăng ký -->
       <div class="auth-toggle">
         <button id="btn-mode-login" class="active" onclick="switchMode('login')">Đăng nhập</button>
         <button id="btn-mode-reg" onclick="switchMode('reg')">Đăng ký tài khoản</button>
       </div>
 
-      <!-- Khung thông báo lỗi / trạng thái chờ duyệt -->
       <div id="auth-alert" class="auth-alert"></div>
 
-      <!-- Form Đăng Nhập / Đăng Ký -->
       <form class="auth-form" onsubmit="event.preventDefault(); handleAuthSubmit();">
         <input type="text" id="auth-email" class="auth-input" placeholder="Email hoặc Tên đăng nhập" value="namvt@vinhhungjsc.com" required>
         <input type="password" id="auth-password" class="auth-input" placeholder="Mật khẩu" required>
@@ -338,10 +335,9 @@
       </div>
     </div>
 
-    <!-- LOGO TRÊN THANH TIÊU ĐỀ TRANG QUẢN TRỊ -->
     <div class="main-title">
       <img class="vh-header-icon" src="logo.png" alt="Logo Vĩnh Hưng">
-      <span>VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</span>
+      <span>VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG ĐƠN HÀNG</span>
     </div>
 
     <div class="filter-box">
@@ -349,7 +345,7 @@
       <div class="filter-grid">
         <div>
           <span class="filter-chip-label">📅 Chọn Năm</span>
-          <select id="f-year" class="filter-select" onchange="render()"><option value="ALL">Tất cả các năm</option><option value="2026" selected>2026</option></select>
+          <select id="f-year" class="filter-select" onchange="render()"><option value="ALL">Tất cả các năm</option></select>
         </div>
         <div>
           <span class="filter-chip-label">⏱️ Kỳ Báo Cáo</span>
@@ -516,7 +512,7 @@
       showApp();
     }
 
-    /* ================= LOGIC DỮ LIỆU & DASHBOARD GỐC (GIỮ NGUYÊN 100%) ================= */
+    /* ================= LOGIC DỮ LIỆU & DASHBOARD ================= */
     const GGS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/export?format=csv&gid=984933238";
     let rawData = [];
     let currentTab = 0;
@@ -672,7 +668,7 @@
         if (!dh || /Tổng|Tong|STT|Số ĐH/i.test(dh)) continue;
 
         let status = clean_status(row[2]);
-        let namRaw = String(row[3] || '2026').trim();
+        let namCotD = String(row[3] || '').trim(); // Cột Năm (D)
         let dept = String(row[4] || 'Chưa phân loại').trim();
         let emp = chuan_hoa_ten_nv(String(row[6] || 'Chưa phân loại'));
         let project = String(row[7] || '').trim();
@@ -706,14 +702,26 @@
         let dAG = parseDate(row[32]);
         let dNK = parseDate(row[33]);
 
-        let dDat = dGui || dAG || dAB;
-        let namDat = dDat ? dDat.getFullYear() : (parseInt(namRaw) || 2026);
-        let thangDat = dDat ? dDat.getMonth() + 1 : 1;
+        // Đơn Đặt Hàng: Ưu tiên ngày gửi/ngày duyệt, nếu không có lấy năm cột D
+        let parsedNamCotD = parseInt(namCotD);
+        let namDat;
+        if (dGui) {
+          namDat = dGui.getFullYear();
+        } else if (dAB) {
+          namDat = dAB.getFullYear();
+        } else if (!isNaN(parsedNamCotD) && parsedNamCotD > 2000) {
+          namDat = parsedNamCotD;
+        } else {
+          namDat = 2026;
+        }
+
+        // Tạo ngày đặt gốc nếu chưa có
+        let dDat = dGui || dAB || new Date(namDat, 0, 1);
 
         let daNhapKho = (status.toLowerCase() === 'done') || (dNK !== null);
 
         rawData.push({
-          So_DH: dh, Trang_Thai_SX: status, Nam_DatHang: namDat, Thang_DatHang: thangDat,
+          So_DH: dh, Trang_Thai_SX: status, Nam_DatHang: namDat,
           Bo_Phan_KD: dept, NV_KD: emp, Du_An: project, Quy_Cach: spec, DVT: unit,
           So_Luong_Tong_DH: slTong, SL_GoiChau: slGoi, SL_KheRangLuoc: slKhe, SL_TamVCO: slVCO,
           SL_HeCotPhuKien: slCot, SL_NhomKhac: slKhac,
@@ -729,6 +737,22 @@
     }
 
     function populateFilterOptions() {
+      // Quét tất cả các năm phát sinh từ cả Ngày đặt hàng và Ngày nhập kho
+      let yearSet = new Set();
+      rawData.forEach(d => {
+        if (d.Nam_DatHang) yearSet.add(d.Nam_DatHang);
+        if (d.Ngay_NhapKho_DT) yearSet.add(d.Ngay_NhapKho_DT.getFullYear());
+      });
+      const years = [...yearSet].sort((a,b) => b - a);
+
+      const sYear = document.getElementById('f-year');
+      let yearOpts = `<option value="ALL">Tất cả các năm</option>`;
+      years.forEach(y => {
+        // Mặc định chọn năm 2026 làm năm hoạt động hiện tại
+        yearOpts += `<option value="${y}" ${y === 2026 ? 'selected' : ''}>Năm ${y}</option>`;
+      });
+      sYear.innerHTML = yearOpts;
+
       const depts = [...new Set(rawData.map(d => d.Bo_Phan_KD).filter(Boolean))].sort();
       const sDept = document.getElementById('f-dept');
       sDept.innerHTML = `<option value="ALL">Tất cả bộ phận</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
@@ -758,7 +782,7 @@
       } else if (p === 'QUARTER') {
         sub.disabled = false;
         sub.innerHTML = [1,2,3,4].map(q => `<option value="${q}">Quý ${q}</option>`).join('');
-        sub.value = 3;
+        sub.value = Math.floor(new Date().getMonth() / 3) + 1;
       } else {
         sub.disabled = true;
         sub.innerHTML = `<option value="ALL">Tất cả (Cả năm)</option>`;
@@ -775,6 +799,7 @@
       return TABS[currentTab].col;
     }
 
+    /* QUY TẮC LỌC KẾ TOÁN SẢN XUẤT */
     function render() {
       const y = document.getElementById('f-year').value;
       const p = document.getElementById('f-period').value;
@@ -783,42 +808,61 @@
       const dept = document.getElementById('f-dept').value;
       const emp = document.getElementById('f-emp').value;
 
-      let yearEff = y === 'ALL' ? 2026 : parseInt(y);
-      let startDate, endDate;
-
-      if (p === 'MONTH') {
-        const m = parseInt(sub);
-        startDate = new Date(yearEff, m - 1, 1, 0, 0, 0);
-        endDate = new Date(yearEff, m, 0, 23, 59, 59);
-      } else if (p === 'QUARTER') {
-        const q = parseInt(sub);
-        startDate = new Date(yearEff, (q - 1) * 3, 1, 0, 0, 0);
-        endDate = new Date(yearEff, q * 3, 0, 23, 59, 59);
-      } else {
-        startDate = new Date(yearEff, 0, 1, 0, 0, 0);
-        endDate = new Date(yearEff, 11, 31, 23, 59, 59);
-      }
-
       let base = rawData.filter(d => {
         if (dept !== 'ALL' && d.Bo_Phan_KD !== dept) return false;
         if (emp !== 'ALL' && d.NV_KD !== emp) return false;
         return true;
       });
 
-      filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= startDate && d.Ngay_DatHang <= endDate);
-      filteredTon = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang < startDate && (!d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate)));
-      filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate && d.Ngay_NhapKho_DT <= endDate);
+      if (y === 'ALL') {
+        // Toàn bộ các năm:
+        filteredMoi = base.filter(d => !d.Da_Nhap_Kho);
+        filteredTon = base.filter(d => !d.Da_Nhap_Kho);
+        filteredDone = base.filter(d => d.Da_Nhap_Kho);
+        filteredChuaChot = base.filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho);
+      } else {
+        let yearEff = parseInt(y);
+        let startDate, endDate;
+
+        if (p === 'MONTH') {
+          const m = parseInt(sub);
+          startDate = new Date(yearEff, m - 1, 1, 0, 0, 0);
+          endDate = new Date(yearEff, m, 0, 23, 59, 59);
+        } else if (p === 'QUARTER') {
+          const q = parseInt(sub);
+          startDate = new Date(yearEff, (q - 1) * 3, 1, 0, 0, 0);
+          endDate = new Date(yearEff, q * 3, 0, 23, 59, 59);
+        } else {
+          startDate = new Date(yearEff, 0, 1, 0, 0, 0);
+          endDate = new Date(yearEff, 11, 31, 23, 59, 59);
+        }
+
+        // 1. ĐƠN ĐẶT MỚI: Chỉ tính đơn phát sinh trong chính kỳ này (2023 thì chỉ nằm ở 2023)
+        filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= startDate && d.Ngay_DatHang <= endDate);
+
+        // 2. ĐƠN TỒN CẦN GIAO: Đặt trước ngày bắt đầu kỳ này (kể cả 2023, 2024, 2025) mà chưa xong trước đầu kỳ
+        filteredTon = base.filter(d => {
+          let datTruocKy = d.Ngay_DatHang && d.Ngay_DatHang < startDate;
+          let chuaXongDauKy = !d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate);
+          return datTruocKy && chuaXongDauKy;
+        });
+
+        // 3. ĐÃ NHẬP KHO: Thực tế nhập kho đúng trong kỳ này (ví dụ đặt 2023 nhưng tháng 9/2026 nhập kho -> tính vào đây)
+        filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= startDate && d.Ngay_NhapKho_DT <= endDate);
+
+        // 4. CHƯA CHỐT: Các đơn trong kỳ hoặc tồn lũy kế chưa có ngày chốt AG và chưa nhập kho
+        filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho);
+      }
 
       if (st !== 'ALL') {
         const matchStatus = d => st.toLowerCase() === 'đang sx' ? ['đang sx', 'done'].includes(d.Trang_Thai_SX.toLowerCase()) : d.Trang_Thai_SX.toLowerCase() === st.toLowerCase();
         filteredMoi = filteredMoi.filter(matchStatus);
         filteredTon = filteredTon.filter(matchStatus);
         filteredDone = filteredDone.filter(matchStatus);
+        filteredChuaChot = filteredChuaChot.filter(matchStatus);
       }
 
-      filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG);
-
-      renderMetrics(startDate, endDate);
+      renderMetrics();
       renderTable();
     }
 
@@ -831,7 +875,7 @@
       return f_val.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
     }
 
-    function renderMetrics(startDate, endDate) {
+    function renderMetrics() {
       const container = document.getElementById('metrics-container');
       const subTabs = document.getElementById('sub-tabs-container');
       const currentTabObj = TABS[currentTab];
@@ -859,23 +903,18 @@
         let subT = currentTab === 0 ? filteredTon : filteredTon.filter(d => (d[qCol] || 0) > 0);
         let subD = currentTab === 0 ? filteredDone : filteredDone.filter(d => (d[qCol] || 0) > 0);
 
-        let tonCan = subT.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
-        let moiCan = subM.filter(d => !d.Ngay_KD_Can_AC || (d.Ngay_KD_Can_AC >= startDate && d.Ngay_KD_Can_AC <= endDate));
-
         const sumCol = arr => arr.reduce((a, b) => a + (b[qCol] || 0), 0);
         const khongTamDung = arr => arr.filter(d => !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
-        const tonDong = arr => arr.filter(d => !(d.Da_Nhap_Kho && d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT <= endDate));
 
         container.innerHTML = `
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${format_number_smart(sumCol(subM))}</div></div>
-            <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${format_number_smart(sumCol(moiCan))}</div></div>
-            <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${format_number_smart(sumCol(tonCan))}</div></div>
+            <div class="metric-card"><div class="metric-label">📦 Đơn Đặt Mới</div><div class="metric-value">${format_number_smart(sumCol(subM))}</div></div>
+            <div class="metric-card"><div class="metric-label">⏳ Tồn Cần Giao</div><div class="metric-value">${format_number_smart(sumCol(subT))}</div></div>
+            <div class="metric-card"><div class="metric-label">🎯 Tổng Phải SX</div><div class="metric-value">${format_number_smart(sumCol(khongTamDung(subM)) + sumCol(khongTamDung(subT)))}</div></div>
           </div>
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${format_number_smart(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan)))}</div></div>
-            <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${format_number_smart(sumCol(subD))}</div></div>
-            <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${format_number_smart(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan))))}</div></div>
+            <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho (Thực Tế)</div><div class="metric-value">${format_number_smart(sumCol(subD))}</div></div>
+            <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${format_number_smart(sumCol(khongTamDung(subM.filter(d => !d.Da_Nhap_Kho))) + sumCol(khongTamDung(subT.filter(d => !d.Da_Nhap_Kho))))}</div></div>
           </div>
         `;
       }
