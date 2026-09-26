@@ -4,42 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VHIP - Quản Lý Tiến Độ & Sản Lượng</title>
-  <!-- Google Fonts & FontAwesome -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <!-- SheetJS để đọc CSV và xuất Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Be Vietnam Pro', sans-serif; }
-    body { background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%); color: #0f172a; min-height: 100vh; padding: 15px; }
+    body { background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%); color: #0f172a; min-height: 100vh; padding: 10px 14px; font-size: 13px; }
 
     /* Màn hình đăng nhập */
     #login-screen {
-      max-width: 420px; margin: 80px auto; background: #fff; padding: 30px;
-      border-radius: 16px; border: 1.5px solid #bcd6ff; box-shadow: 0 8px 24px rgba(13,71,161,0.12); text-align: center;
+      max-width: 380px; margin: 70px auto; background: #fff; padding: 24px 28px;
+      border-radius: 14px; border: 1.5px solid #bcd6ff; box-shadow: 0 6px 20px rgba(13,71,161,0.1); text-align: center;
     }
-    .form-group { margin-bottom: 16px; text-align: left; }
-    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #0d47a1; margin-bottom: 6px; }
+    .form-group { margin-bottom: 14px; text-align: left; }
+    .form-group label { display: block; font-size: 12.5px; font-weight: 700; color: #0d47a1; margin-bottom: 5px; }
     .form-control {
-      width: 100%; padding: 10px 14px; border: 1.5px solid #93b8f2; border-radius: 10px; font-size: 14px; outline: none;
+      width: 100%; padding: 8px 12px; border: 1.5px solid #93b8f2; border-radius: 9px; font-size: 13px; outline: none;
     }
-    .form-control:focus { border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.15); }
+    .form-control:focus { border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.12); }
     .btn-login {
-      width: 100%; padding: 12px; background: linear-gradient(90deg, #0d47a1, #1565c0);
-      color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 15px; cursor: pointer; transition: 0.2s;
+      width: 100%; padding: 10px; background: linear-gradient(90deg, #0d47a1, #1565c0);
+      color: #fff; border: none; border-radius: 9px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 6px;
     }
     .btn-login:hover { opacity: 0.95; transform: translateY(-1px); }
 
     /* Top bar */
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .update-badge {
-      display: inline-block; font-size: 13px; font-weight: 700; color: #ffffff;
-      background: linear-gradient(90deg, #1e88e5, #00acc1); padding: 5px 16px; border-radius: 20px; box-shadow: 0 3px 8px rgba(30,136,229,0.35);
+      display: inline-block; font-size: 12px; font-weight: 700; color: #ffffff;
+      background: linear-gradient(90deg, #1e88e5, #00acc1); padding: 3px 12px; border-radius: 20px; box-shadow: 0 2px 6px rgba(30,136,229,0.3);
     }
     .btn-action {
-      background: #fff; border: 1.5px solid #93b8f2; padding: 6px 14px; border-radius: 10px;
-      color: #0d47a1; font-weight: 700; cursor: pointer; font-size: 13px; transition: 0.2s;
+      background: #fff; border: 1.5px solid #93b8f2; padding: 4px 12px; border-radius: 8px;
+      color: #0d47a1; font-weight: 700; cursor: pointer; font-size: 12px; transition: 0.15s;
     }
     .btn-action:hover { background: #eef5ff; }
 
@@ -47,113 +45,138 @@
     .main-title {
       background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px;
-      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 4px solid #0d47a1;
+      font-size: 21px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 8px; padding-bottom: 4px; border-bottom: 3px solid #0d47a1;
     }
 
     /* Bộ lọc */
     .filter-box {
       background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
-      border: 1.5px solid #bcd6ff; border-radius: 14px; box-shadow: 0 4px 14px rgba(13,71,161,0.08); padding: 12px 16px; margin-bottom: 16px;
+      border: 1.5px solid #bcd6ff; border-radius: 12px; box-shadow: 0 3px 10px rgba(13,71,161,0.06); padding: 8px 12px; margin-bottom: 10px;
     }
-    .filter-title { color: #0d47a1; font-size: 16px; font-weight: 800; margin-bottom: 12px; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .filter-title { color: #0d47a1; font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    @media (max-width: 1024px) {
+      .filter-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .filter-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     .filter-chip-label {
-      display: inline-block; background: #e7f0ff; border: 1px solid #b9d4ff; border-left: 4px solid #1565c0;
-      border-radius: 6px; padding: 3px 8px; margin-bottom: 4px; color: #0d47a1; font-weight: 800; font-size: 12px;
+      display: inline-block; background: #e7f0ff; border: 1px solid #b9d4ff; border-left: 3px solid #1565c0;
+      border-radius: 5px; padding: 2px 6px; margin-bottom: 3px; color: #0d47a1; font-weight: 800; font-size: 11px;
     }
     select.filter-select {
-      width: 100%; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #93b8f2;
-      background: #fff; font-size: 13px; font-weight: 600; color: #0d47a1; outline: none; cursor: pointer;
+      width: 100%; padding: 5px 8px; border-radius: 8px; border: 1.5px solid #93b8f2;
+      background: #fff; font-size: 12px; font-weight: 600; color: #0d47a1; outline: none; cursor: pointer;
     }
 
     /* Danh mục Tab sản phẩm */
-    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .tab-btn {
-      background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 2px solid #93b8f2;
-      border-radius: 12px; padding: 8px 16px; color: #0d47a1; font-weight: 800; font-size: 13.5px; cursor: pointer; transition: 0.2s;
+      background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 1.5px solid #93b8f2;
+      border-radius: 10px; padding: 6px 12px; color: #0d47a1; font-weight: 800; font-size: 12.5px; cursor: pointer; transition: 0.15s;
     }
     .tab-btn.active {
-      background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8); color: #fff; border-color: #0d47a1; transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(13,71,161,0.35);
+      background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8); color: #fff; border-color: #0d47a1; transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(13,71,161,0.25);
     }
 
-    /* Metric Cards */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    /* ================= KHỐI THẺ METRIC GỌN GÀNG (CHUẨN 2 HÀNG x 3 CỘT) ================= */
+    .metric-wrapper {
+      margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .metric-row {
+      display: grid; gap: 8px;
+    }
+    .metric-row.cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .metric-row.cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    @media (max-width: 768px) {
+      .metric-row.cols-3, .metric-row.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    }
     .metric-card {
       background: linear-gradient(145deg, #ffffff 0%, #eef5ff 60%, #d8edff 100%);
-      padding: 10px 14px; border-radius: 12px; border-left: 5px solid #1976d2; box-shadow: 0 3px 10px rgba(13,71,161,0.12);
-      text-align: center; transition: 0.2s;
+      padding: 6px 10px; border-radius: 10px; border-left: 4px solid #1976d2; box-shadow: 0 2px 7px rgba(13,71,161,0.1);
+      text-align: center; max-width: 230px; margin: 0 auto; width: 100%; transition: 0.15s;
     }
-    .metric-card:hover { transform: translateY(-2px); }
-    .metric-label { color: #0d47a1; font-weight: 800; font-size: 12.5px; margin-bottom: 4px; }
-    .metric-value { color: #0b3d91; font-weight: 900; font-size: 24px; }
+    .metric-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,71,161,0.16); }
+    .metric-label {
+      color: #0d47a1; font-weight: 800; font-size: 11.5px; margin-bottom: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .metric-value {
+      color: #0b3d91; font-weight: 900; font-size: 20px; letter-spacing: -0.2px; line-height: 1.2;
+    }
+
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, #b9d4ff, transparent); margin: 8px 0; border: none; }
 
     /* Sub Tabs & Công cụ */
-    .sub-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .sub-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .sub-tabs { display: flex; gap: 6px; }
     .sub-tab-btn {
-      padding: 6px 14px; border-radius: 8px; border: 1.5px solid #bcd6ff; background: #fff;
-      font-weight: 700; font-size: 13px; color: #0d47a1; cursor: pointer;
+      padding: 5px 12px; border-radius: 7px; border: 1px solid #bcd6ff; background: #fff;
+      font-weight: 700; font-size: 12px; color: #0d47a1; cursor: pointer;
     }
     .sub-tab-btn.active { background: #0d47a1; color: #fff; border-color: #0d47a1; }
-    .actions-wrap { display: flex; gap: 10px; align-items: center; }
+    .actions-wrap { display: flex; gap: 8px; align-items: center; }
     .search-box {
-      border: 1.5px solid #93b8f2; border-radius: 20px; padding: 6px 14px; font-size: 13px; width: 220px; outline: none;
+      border: 1.5px solid #93b8f2; border-radius: 16px; padding: 4px 12px; font-size: 12px; width: 200px; outline: none;
     }
     .btn-export {
       background: linear-gradient(90deg, #0d47a1, #00b4d8); color: #fff; font-weight: 800;
-      font-size: 13px; border: none; padding: 7px 16px; border-radius: 20px; cursor: pointer; transition: 0.2s;
+      font-size: 12px; border: none; padding: 5px 14px; border-radius: 16px; cursor: pointer; transition: 0.15s;
     }
-    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,180,216,0.4); }
+    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,180,216,0.35); }
 
     /* Bảng dữ liệu */
     .table-container {
-      max-height: 480px; overflow: auto; border-radius: 12px; border: 1px solid #cfe0ff;
-      box-shadow: 0 4px 14px rgba(13,71,161,0.1); background: #fff;
+      max-height: 480px; overflow: auto; border-radius: 10px; border: 1px solid #cfe0ff;
+      box-shadow: 0 3px 10px rgba(13,71,161,0.08); background: #fff;
     }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
     thead th {
       position: sticky; top: 0; background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1);
-      color: #fff; font-weight: 800; padding: 10px 12px; text-align: center; border-bottom: 2px solid #08306b; z-index: 2;
+      color: #fff; font-weight: 800; padding: 7px 10px; text-align: center; border-bottom: 2px solid #08306b; z-index: 2; font-size: 12px;
     }
-    tbody td { padding: 8px 12px; border-bottom: 1px solid #e6edf7; text-align: center; }
+    tbody td { padding: 6px 10px; border-bottom: 1px solid #e6edf7; text-align: center; }
     tbody tr:nth-child(even) td { background-color: #f7faff; }
     tbody tr:hover td { background-color: #e3f0ff; }
     
-    /* Highlight tooltip cột Dự Án, Quy Cách */
     td.col-expand {
-      max-width: 180px; min-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+      max-width: 170px; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
     }
     td.col-expand:hover {
       white-space: normal; overflow: visible; background-color: #fff9c4 !important; color: #0d47a1; font-weight: 600;
     }
 
-    /* Style Cảnh Báo */
     .cb-red { background-color: #ffc9c9 !important; color: #900C3F; font-weight: bold; }
     .cb-orange { background-color: #ffe5b4 !important; color: #d35400; font-weight: bold; }
     .cb-yellow { background-color: #fff9c4 !important; color: #856404; }
     .cb-green { background-color: #d4edda !important; color: #155724; }
     .cb-gray { background-color: #e9ecef !important; color: #6c757d; }
 
-    #loading { text-align: center; padding: 40px; font-weight: 700; color: #0d47a1; font-size: 16px; }
+    #loading { text-align: center; padding: 30px; font-weight: 700; color: #0d47a1; font-size: 14px; }
   </style>
 </head>
 <body>
 
   <!-- MÀN HÌNH ĐĂNG NHẬP -->
   <div id="login-screen">
-    <h2 style="color: #0d47a1; margin-bottom: 8px;">🛡️ VHIP - ĐĂNG NHẬP</h2>
-    <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">Nhập tài khoản công ty để truy cập Dashboard</p>
+    <h3 style="color: #0d47a1; margin-bottom: 6px;">🛡️ VHIP - ĐĂNG NHẬP</h3>
+    <p style="color: #64748b; font-size: 12px; margin-bottom: 16px;">Nhập tài khoản công ty để truy cập Dashboard</p>
     <div class="form-group">
       <label>Tên đăng nhập</label>
-      <input type="text" id="login-user" class="form-control" placeholder="Nhập tên đăng nhập">
+      <input type="text" id="login-user" class="form-control" placeholder="Tên đăng nhập">
     </div>
     <div class="form-group">
       <label>Mật khẩu</label>
-      <input type="password" id="login-pass" class="form-control" placeholder="Nhập mật khẩu">
+      <input type="password" id="login-pass" class="form-control" placeholder="Mật khẩu">
     </div>
-    <div id="login-err" style="color: #d32f2f; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
+    <div id="login-err" style="color: #d32f2f; font-size: 12px; font-weight: 600; margin-bottom: 10px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
     <button class="btn-login" onclick="handleLogin()">Đăng Nhập</button>
   </div>
 
@@ -163,7 +186,7 @@
       <div class="update-badge" id="update-badge">🔄 Đang tải...</div>
       <div>
         <button class="btn-action" onclick="fetchData()">⚡ Làm Mới Ngay</button>
-        <button class="btn-action" onclick="handleLogout()" style="margin-left: 6px;">🚪 Đăng Xuất</button>
+        <button class="btn-action" onclick="handleLogout()" style="margin-left: 4px;">🚪 Đăng Xuất</button>
       </div>
     </div>
 
@@ -207,8 +230,10 @@
     <!-- TABS SẢN PHẨM -->
     <div class="nav-tabs" id="product-tabs"></div>
 
-    <!-- METRICS -->
-    <div class="metric-grid" id="metrics-container"></div>
+    <!-- METRICS (2 HÀNG GỌN GÀNG) -->
+    <div class="metric-wrapper" id="metrics-container"></div>
+
+    <hr class="divider">
 
     <!-- SUB BAR & SEARCH -->
     <div class="sub-bar">
@@ -266,7 +291,6 @@
       { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac" }
     ];
 
-    // XỬ LÝ ĐĂNG NHẬP
     if (sessionStorage.getItem('vhip_logged_in') === 'true') showApp();
 
     function handleLogin() {
@@ -309,7 +333,6 @@
       renderTable();
     }
 
-    // LOAD DỮ LIỆU
     function fetchData() {
       document.getElementById('loading').style.display = 'block';
       fetch(GGS_CSV_URL)
@@ -323,7 +346,7 @@
           document.getElementById('update-badge').innerText = `🔄 Cập nhật: ${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')}`;
         })
         .catch(err => {
-          alert("Lỗi tải dữ liệu Google Sheets: " + err);
+          alert("Lỗi tải dữ liệu: " + err);
           document.getElementById('loading').style.display = 'none';
         });
     }
@@ -479,11 +502,15 @@
         filteredDone = filteredDone.filter(matchStatus);
       }
 
-      // CHƯA CHỐT TIẾN ĐỘ
       filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG);
 
       renderMetrics(startDate, endDate);
       renderTable();
+    }
+
+    function fmtSmart(num) {
+      if (!num || isNaN(num)) return "0";
+      return Number.isInteger(num) ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
     }
 
     function renderMetrics(startDate, endDate) {
@@ -495,13 +522,17 @@
         subTabs.style.display = 'none';
         const sum = col => filteredChuaChot.reduce((a, b) => a + (b[col] || 0), 0);
         container.innerHTML = `
-          <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${filteredChuaChot.length.toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${sum('SL_GoiChau').toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${sum('SL_KheRangLuoc').toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${sum('SL_TamVCO').toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${sum('SL_HeCotPhuKien').toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${sum('SL_NhomKhac').toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${sum('So_Luong_Tong_DH').toLocaleString()}</div></div>
+          <div class="metric-row cols-4">
+            <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${fmtSmart(filteredChuaChot.length)}</div></div>
+            <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${fmtSmart(sum('SL_GoiChau'))}</div></div>
+            <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${fmtSmart(sum('SL_KheRangLuoc'))}</div></div>
+            <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${fmtSmart(sum('SL_TamVCO'))}</div></div>
+          </div>
+          <div class="metric-row cols-3">
+            <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${fmtSmart(sum('SL_HeCotPhuKien'))}</div></div>
+            <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${fmtSmart(sum('SL_NhomKhac'))}</div></div>
+            <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${fmtSmart(sum('So_Luong_Tong_DH'))}</div></div>
+          </div>
         `;
       } else {
         subTabs.style.display = 'flex';
@@ -517,12 +548,16 @@
         const tonDong = arr => arr.filter(d => !(d.Da_Nhap_Kho && d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT <= endDate));
 
         container.innerHTML = `
-          <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${sumCol(subM).toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${sumCol(moiCan).toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${sumCol(tonCan).toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan))).toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${sumCol(subD).toLocaleString()}</div></div>
-          <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan)))).toLocaleString()}</div></div>
+          <div class="metric-row cols-3">
+            <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${fmtSmart(sumCol(subM))}</div></div>
+            <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${fmtSmart(sumCol(moiCan))}</div></div>
+            <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${fmtSmart(sumCol(tonCan))}</div></div>
+          </div>
+          <div class="metric-row cols-3">
+            <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan)))}</div></div>
+            <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${fmtSmart(sumCol(subD))}</div></div>
+            <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan))))}</div></div>
+          </div>
         `;
       }
     }
@@ -569,7 +604,7 @@
       const tbody = document.getElementById('table-body');
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" style="padding: 24px; color: #64748b;">Không có dữ liệu phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="padding: 20px; color: #64748b;">Không có dữ liệu phù hợp.</td></tr>`;
         return;
       }
 
@@ -583,7 +618,7 @@
             <td class="col-expand" title="${d.Du_An}">${d.Du_An}</td>
             <td class="col-expand" title="${d.Quy_Cach}">${d.Quy_Cach}</td>
             <td>${d.DVT}</td>
-            <td style="font-weight:700;">${(d[qCol] || 0).toLocaleString()}</td>
+            <td style="font-weight:700;">${fmtSmart(d[qCol] || 0)}</td>
             <td class="${cb.cls}">${cb.text}</td>
             <td>${d.Trang_Thai_SX}</td>
             <td>${fmtDate(d.Ngay_Duyet_AB)}</td>
