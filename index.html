@@ -44,6 +44,7 @@
     .auth-logo-img {
       width: 100%;
       height: auto;
+      max-height: 55px;
       display: block;
       object-fit: contain;
     }
@@ -161,12 +162,15 @@
       border-image: linear-gradient(90deg, #0d47a1, #00b4d8, #90e0ef) 1;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
     .vh-header-icon {
-      height: 28px;
+      height: 32px;
       width: auto;
+      max-width: 120px;
       object-fit: contain;
+      vertical-align: middle;
+      flex-shrink: 0;
     }
 
     .filter-box {
@@ -292,8 +296,8 @@
   <div id="login-wrapper">
     <div class="auth-card">
       <div class="auth-logo-box">
-        <!-- ẢNH GỐC CHUẨN XÁC 100% CỦA VĨNH HƯNG -->
-        <img class="auth-logo-img" alt="Logo Vĩnh Hưng" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAK8AAABOCAMAAACvJpL0AAAAUVBMVEUAAAAAAAABAQEAAAAAAAABAQEAAAAAAAABAQEBAQEAAAD/AAAA/wABAQEBAQEBAQEAAAD/AAAA/wAAAAD/AAAA/wABAQEAAP//AAD/AAAAAAD///820nN/AAAAGXRSTlMAEQ8QHzw9REZHS0xQUVFUVVhZWlhZXF1gL/lFhgAAAv9JREFUeNrtmttugzAMRXsgtKWUpS3t//92L0hY2vRCAk2b9nwoD63r4+Njx7Isj8e37/Ucfb7/3kLwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq3F8Xw+390pD450700kAAAAAElFTkSuQmCC" />
+        <!-- GỌI TRỰC TIẾP FILE ẢNH LOGO.PNG TRÊN GITHUB -->
+        <img class="auth-logo-img" src="logo.png" alt="Logo Vĩnh Hưng">
       </div>
 
       <div class="auth-title">VHIP – Quản lý Đơn hàng</div>
@@ -334,9 +338,9 @@
       </div>
     </div>
 
-    <!-- LOGO VĨNH HƯNG Ở TIÊU ĐỀ TRANG QUẢN TRỊ -->
+    <!-- LOGO TRÊN THANH TIÊU ĐỀ TRANG QUẢN TRỊ -->
     <div class="main-title">
-      <img class="vh-header-icon" alt="Logo Vĩnh Hưng" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAK8AAABOCAMAAACvJpL0AAAAUVBMVEUAAAAAAAABAQEAAAAAAAABAQEAAAAAAAABAQEBAQEAAAD/AAAA/wABAQEBAQEBAQEAAAD/AAAA/wAAAAD/AAAA/wABAQEAAP//AAD/AAAAAAD///820nN/AAAAGXRSTlMAEQ8QHzw9REZHS0xQUVFUVVhZWlhZXF1gL/lFhgAAAv9JREFUeNrtmttugzAMRXsgtKWUpS3t//92L0hY2vRCAk2b9nwoD63r4+Njx7Isj8e37/Ucfb7/3kLwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq1FwVu1FgVv1VoUvFVrUfBWrUXBW7UWBW/VWhS8VWtR8FatRcFbtRYFb9VaFLxVa1HwVq3F8Xw+390pD450700kAAAAAElFTkSuQmCC" />
+      <img class="vh-header-icon" src="logo.png" alt="Logo Vĩnh Hưng">
       <span>VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</span>
     </div>
 
