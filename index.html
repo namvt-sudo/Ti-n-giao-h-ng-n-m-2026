@@ -397,7 +397,6 @@
         </div>
         <div>
           <span class="filter-chip-label">👤 Gõ / Chọn NVKD</span>
-          <!-- Ô TÌM KIẾM NHANH TÊN NVKD CÓ GỢI Ý AUTOCOMPLETE -->
           <input list="nvkd-list" id="f-emp" class="filter-input" placeholder="🔍 Gõ tên hoặc chọn NVKD..." oninput="render()">
           <datalist id="nvkd-list"></datalist>
         </div>
@@ -435,7 +434,7 @@
       </div>
       <div class="actions-wrap">
         <input type="text" id="search-kw" class="search-box" placeholder="🔍 Nhập Mã ĐH, Dự án..." oninput="renderTable()">
-        <button class="btn-export" id="btn-export-text" onclick="exportExcel()">📥 Xuất Excel</button>
+        <button class="btn-export" id="btn-export-excel" onclick="exportExcel()">📥 Xuất Excel Tổng</button>
       </div>
     </div>
 
@@ -575,12 +574,15 @@
         currentSubProduct = 'ALL';
       }
 
-      // Cập nhật tiêu đề bảng theo sản phẩm đang chọn
       const thSL = document.getElementById('th-soluong');
+      const btnExportText = document.getElementById('btn-export-excel');
+      
       if (currentTab === 0 || currentTab === 1) {
         thSL.innerText = "Tổng Số Lượng";
+        btnExportText.innerText = "📥 Xuất Excel Tổng";
       } else {
         thSL.innerText = `SL ${TABS[currentTab].label}`;
+        btnExportText.innerText = `📥 Xuất Excel ${TABS[currentTab].label}`;
       }
 
       render();
@@ -675,8 +677,10 @@
 
     function chuan_hoa_ten_nv(ten) {
       if (!ten) return '';
-      let s = String(ten).trim().replace(/^(mr|ms|mrs)\.?\s*/i, '').trim();
-      return s.replace(/\s+/g, ' ');
+      let s = String(ten).trim();
+      s = s.replace(/^(mr|ms|mrs)\.?\s*/i, '');
+      s = s.replace(/^(phòng\s*kd|phong\s*kd|pkd|kd)\s*[\d\.\-_:\/]*\s*[-–:]*\s*/i, '');
+      return s.trim().replace(/\s+/g, ' ');
     }
 
     function parseDate(val) {
@@ -706,8 +710,20 @@
 
         let status = clean_status(row[2]);
         let namCotD = String(row[3] || '').trim();
-        let dept = String(row[4] || 'Chưa phân loại').trim();
-        let emp = chuan_hoa_ten_nv(String(row[6] || 'Chưa phân loại'));
+
+        let dept = String(row[4] || '').trim();
+        if (!dept || dept.toLowerCase() === 'chưa phân loại') {
+          let col5 = String(row[5] || '').trim();
+          if (/^PKD|^KD|^Phòng/i.test(col5)) {
+            dept = col5;
+          }
+        }
+        if (!dept) dept = 'Bộ phận KD';
+
+        let empRaw = String(row[6] || row[5] || '').trim();
+        let emp = chuan_hoa_ten_nv(empRaw);
+        if (!emp) emp = 'Chung';
+
         let project = String(row[7] || '').trim();
         let spec = String(row[9] || '').trim();
         let unit = String(row[10] || 'cái').trim();
@@ -735,9 +751,9 @@
 
         let dGui = parseDate(row[26]);
         let dAB = parseDate(row[27]);
-        let dAC = parseDate(row[28]); // NGÀY KD YÊU CẦU GIAO HÀNG
-        let dAG = parseDate(row[32]); // CHỐT TIẾN ĐỘ
-        let dNK = parseDate(row[33]); // NGÀY NHẬP KHO THỰC TẾ
+        let dAC = parseDate(row[28]);
+        let dAG = parseDate(row[32]);
+        let dNK = parseDate(row[33]);
 
         let parsedNamCotD = parseInt(namCotD);
         let namDat;
@@ -801,7 +817,6 @@
       const dept = document.getElementById('f-dept').value;
       const emps = [...new Set(rawData.filter(d => dept === 'ALL' || d.Bo_Phan_KD === dept).map(d => d.NV_KD).filter(Boolean))].sort();
       
-      // Đổ danh sách vào datalist hỗ trợ tìm kiếm autocomplete
       const datalistEmp = document.getElementById('nvkd-list');
       datalistEmp.innerHTML = emps.map(e => `<option value="${e}"></option>`).join('');
       render();
@@ -876,17 +891,14 @@
           labelKyDatMoi = `Đặt Mới Năm ${yearEff}`;
         }
 
-        // 1. ĐẶT MỚI: Đặt trong kỳ
         filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= currentStartDate && d.Ngay_DatHang <= currentEndDate);
 
-        // 2. ĐẶT & CẦN GIAO: Đặt trong kỳ VÀ Ngày KD yêu cầu rơi vào kỳ này
         filteredCanGiao = filteredMoi.filter(d => {
           let dYeuCau = d.Ngay_KD_Can_AC || d.Ngay_Chot_AG;
           if (!dYeuCau) return true;
           return (dYeuCau >= currentStartDate && dYeuCau <= currentEndDate);
         });
 
-        // 3. TỒN LŨY KẾ: Đặt trước kỳ, chưa xong, hẹn giao trong kỳ VÀ LOẠI TRÙ TẠM DỪNG
         filteredTon = base.filter(d => {
           let datTruocKy = d.Ngay_DatHang && d.Ngay_DatHang < currentStartDate;
           let chuaXongDauKy = !d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= currentStartDate);
@@ -898,10 +910,8 @@
           return (dYeuCau >= currentStartDate && dYeuCau <= currentEndDate);
         });
 
-        // 4. ĐÃ NHẬP KHO: Nhập kho trong kỳ
         filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= currentStartDate && d.Ngay_NhapKho_DT <= currentEndDate);
 
-        // 5. CHƯA CHỐT: Không tính tạm dừng
         filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho && !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
       }
 
@@ -967,7 +977,6 @@
         let conPhaiSX = (tongCanSX > daNhapKho) ? (tongCanSX - daNhapKho) : 0;
 
         container.innerHTML = `
-          <!-- HÀNG 1: ĐẶT MỚI - ĐẶT & CẦN GIAO - TỒN LŨY KẾ -->
           <div class="metric-grid-3">
             <div class="metric-card-pro">
               <div class="metric-label-pro">📦 ${labelKyDatMoi}</div>
@@ -983,7 +992,6 @@
             </div>
           </div>
 
-          <!-- HÀNG 2: TỔNG CẦN SX - ĐÃ NHẬP KHO - CÒN PHẢI SX -->
           <div class="metric-grid-3">
             <div class="metric-card-pro">
               <div class="metric-label-pro">🎯 Tổng Cần SX</div>
@@ -1031,7 +1039,6 @@
         else if (currentSubTab === 'TON') data = filteredTon;
         else data = filteredDone;
 
-        // Nếu ở tab sản phẩm cụ thể (Gối, Khe...), chỉ lấy dòng có sản lượng của sản phẩm đó
         if (currentTab !== 0) data = data.filter(d => (d[qCol] || 0) > 0);
       }
       const kw = document.getElementById('search-kw').value.trim().toLowerCase();
@@ -1073,7 +1080,6 @@
       }).join('');
     }
 
-    /* ================= XUẤT EXCEL CHUẨN XÁC THEO SẢN PHẨM ================= */
     function exportExcel() {
       const list = getTableData();
       const qCol = getActiveCol();
@@ -1100,7 +1106,6 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao");
       
-      // Đặt tên file theo đúng tab sản phẩm đang mở
       let safeName = currentTabObj.name.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
       XLSX.writeFile(wb, `Bao_Cao_${safeName}.xlsx`);
     }
