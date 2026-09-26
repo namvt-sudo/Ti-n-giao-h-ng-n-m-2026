@@ -69,7 +69,7 @@
       background: #ffffff; font-size: 12.5px; font-weight: 700; color: #0d47a1; outline: none; cursor: pointer; box-shadow: 0 1px 4px rgba(13,71,161,0.08);
     }
 
-    /* Danh mục Tab sản phẩm */
+    /* Tabs sản phẩm */
     .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .tab-btn {
       background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 2px solid #93b8f2;
@@ -82,7 +82,7 @@
       box-shadow: 0 6px 16px rgba(13,71,161,0.35); transform: translateY(-2px); font-weight: 900;
     }
 
-    /* KHỐI METRIC CARD GỌN GÀNG */
+    /* Metrics Cards */
     .metric-wrapper { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
     .metric-row { display: flex; gap: 12px; justify-content: center; }
     .metric-card {
@@ -278,13 +278,13 @@
     let currentSubTab = 'MOI';
 
     const TABS = [
-      { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH" },
-      { name: "🚨 Chưa Chốt Tiến Độ Giao Hàng", col: "So_Luong_Tong_DH" },
-      { name: "📦 Gối Chậu", col: "SL_GoiChau" },
-      { name: "⚙️ Khe Răng Lược", col: "SL_KheRangLuoc" },
-      { name: "🧱 Tấm VCO", col: "SL_TamVCO" },
-      { name: "🏗️ Cột H (Phụ Kiện)", col: "SL_HeCotPhuKien" },
-      { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac" }
+      { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH", isDecimal: false },
+      { name: "🚨 Chưa Chốt Tiến Độ Giao Hàng", col: "So_Luong_Tong_DH", isDecimal: false },
+      { name: "📦 Gối Chậu", col: "SL_GoiChau", isDecimal: false },
+      { name: "⚙️ Khe Răng Lược", col: "SL_KheRangLuoc", isDecimal: true },
+      { name: "🧱 Tấm VCO", col: "SL_TamVCO", isDecimal: false },
+      { name: "🏗️ Cột H (Phụ Kiện)", col: "SL_HeCotPhuKien", isDecimal: false },
+      { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac", isDecimal: false }
     ];
 
     if (sessionStorage.getItem('vhip_logged_in') === 'true') showApp();
@@ -347,27 +347,24 @@
         });
     }
 
-    // ================= SỬA LẠI CHUẨN XÁC HÀM XỬ LÝ SỐ =================
-    function parseNum(val) {
+    // ================= XỬ LÝ CHUẨN XÁC THEO ĐỊNH DẠNG VIỆT NAM =================
+    // Ví dụ GGS: "180,00" -> 180 | "2.366,00" -> 2366 | "18,26" -> 18.26
+    function parseNum(val, allowDecimal = false) {
       if (val === null || val === undefined || val === '') return 0;
       let s = String(val).trim().replace(/\s/g, '').replace(/\xa0/g, '');
       if (!s || /^(nan|none|null|-)$/i.test(s)) return 0;
 
-      // Nếu có cả chấm và phẩy (ví dụ: 1.234,56 -> 1234.56)
-      if (s.includes('.') && s.includes(',')) {
-        if (s.indexOf('.') < s.indexOf(',')) {
-          s = s.replace(/\./g, '').replace(',', '.');
-        } else {
-          s = s.replace(/,/g, '');
-        }
-      } 
-      // Nếu chỉ có dấu phẩy: chuyển phẩy thành chấm thập phân
-      else if (s.includes(',')) {
-        s = s.replace(',', '.');
-      }
+      // Xóa dấu chấm phân cách hàng nghìn (2.366,00 -> 2366,00)
+      s = s.replace(/\./g, '');
 
-      const n = parseFloat(s);
-      return isNaN(n) ? 0 : n;
+      // Chuyển dấu phẩy thành dấu chấm để máy tính hiểu
+      s = s.replace(/,/g, '.');
+
+      let n = parseFloat(s);
+      if (isNaN(n)) return 0;
+
+      // Nếu không phải là khe răng lược thì luôn làm tròn/lấy số nguyên
+      return allowDecimal ? n : Math.round(n);
     }
 
     function parseDate(val) {
@@ -410,12 +407,16 @@
         let namDat = dDat ? dDat.getFullYear() : (parseInt(namRaw) || 2026);
         let thangDat = dDat ? dDat.getMonth() + 1 : 1;
 
-        let slGoi = parseNum(row[15]);
-        let slKhe = parseNum(row[14]);
-        let slVCO = parseNum(row[23]);
-        let slCot = parseNum(row[24]);
-        let slKhac = parseNum(row[16]) + parseNum(row[17]) + parseNum(row[18]) + parseNum(row[19]) + parseNum(row[20]) + parseNum(row[21]) + parseNum(row[22]) + parseNum(row[25]);
-        let slTong = parseNum(row[13]);
+        // Gối chậu, VCO, Cột H, Sản phẩm khác -> số nguyên (false)
+        let slGoi = parseNum(row[15], false);
+        // Chỉ DUY NHẤT Khe răng lược -> giữ số lẻ mét (true)
+        let slKhe = parseNum(row[14], true);
+        let slVCO = parseNum(row[23], false);
+        let slCot = parseNum(row[24], false);
+        let slKhac = parseNum(row[16], false) + parseNum(row[17], false) + parseNum(row[18], false) + parseNum(row[19], false) + parseNum(row[20], false) + parseNum(row[21], false) + parseNum(row[22], false) + parseNum(row[25], false);
+        
+        // Tổng ĐH
+        let slTong = parseNum(row[13], true);
         if (slTong <= 0) slTong = slGoi + slKhe + slVCO + slCot + slKhac;
 
         rawData.push({
@@ -518,37 +519,42 @@
       renderTable();
     }
 
-    // ================= ĐỊNH DẠNG SỐ THÔNG MINH =================
-    // Nếu là số nguyên -> hiển thị 42, 24, 700
-    // Nếu có số lẻ thập phân (khe răng lược) -> hiển thị 42.36
-    function fmtSmart(num) {
+    // ================= HIỂN THỊ ĐỊNH DẠNG VIỆT NAM (CHẤM PHÂN CÁCH NGÀN, PHẨY THẬP PHÂN) =================
+    function fmtSmart(num, isDecimal = false) {
       if (num === null || num === undefined || isNaN(num)) return "0";
       const val = Number(num);
-      if (Number.isInteger(val)) {
-        return val.toLocaleString('en-US');
+
+      // Nếu không có phần lẻ hoặc là số nguyên
+      if (Number.isInteger(val) || !isDecimal) {
+        // Ví dụ: 2366 -> "2.366" (chuẩn VN)
+        return Math.round(val).toLocaleString('vi-VN');
       }
-      return val.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+
+      // Nếu là số lẻ mét (Khe răng lược) ví dụ 18.26 -> "18,26" (chuẩn VN)
+      return val.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
     }
 
     function renderMetrics(startDate, endDate) {
       const container = document.getElementById('metrics-container');
       const subTabs = document.getElementById('sub-tabs-container');
-      const qCol = TABS[currentTab].col;
+      const currentTabObj = TABS[currentTab];
+      const qCol = currentTabObj.col;
+      const isDec = currentTabObj.isDecimal;
 
-      if (TABS[currentTab].name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
+      if (currentTabObj.name === "🚨 Chưa Chốt Tiến Độ Giao Hàng") {
         subTabs.style.display = 'none';
         const sum = col => filteredChuaChot.reduce((a, b) => a + (b[col] || 0), 0);
         container.innerHTML = `
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${fmtSmart(filteredChuaChot.length)}</div></div>
-            <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${fmtSmart(sum('SL_GoiChau'))}</div></div>
-            <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${fmtSmart(sum('SL_KheRangLuoc'))}</div></div>
-            <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${fmtSmart(sum('SL_TamVCO'))}</div></div>
+            <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${fmtSmart(filteredChuaChot.length, false)}</div></div>
+            <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${fmtSmart(sum('SL_GoiChau'), false)}</div></div>
+            <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${fmtSmart(sum('SL_KheRangLuoc'), true)}</div></div>
+            <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${fmtSmart(sum('SL_TamVCO'), false)}</div></div>
           </div>
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${fmtSmart(sum('SL_HeCotPhuKien'))}</div></div>
-            <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${fmtSmart(sum('SL_NhomKhac'))}</div></div>
-            <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${fmtSmart(sum('So_Luong_Tong_DH'))}</div></div>
+            <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${fmtSmart(sum('SL_HeCotPhuKien'), false)}</div></div>
+            <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${fmtSmart(sum('SL_NhomKhac'), false)}</div></div>
+            <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${fmtSmart(sum('So_Luong_Tong_DH'), false)}</div></div>
           </div>
         `;
       } else {
@@ -566,14 +572,14 @@
 
         container.innerHTML = `
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${fmtSmart(sumCol(subM))}</div></div>
-            <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${fmtSmart(sumCol(moiCan))}</div></div>
-            <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${fmtSmart(sumCol(tonCan))}</div></div>
+            <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${fmtSmart(sumCol(subM), isDec)}</div></div>
+            <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${fmtSmart(sumCol(moiCan), isDec)}</div></div>
+            <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${fmtSmart(sumCol(tonCan), isDec)}</div></div>
           </div>
           <div class="metric-row">
-            <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan)))}</div></div>
-            <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${fmtSmart(sumCol(subD))}</div></div>
-            <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan))))}</div></div>
+            <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan)), isDec)}</div></div>
+            <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${fmtSmart(sumCol(subD), isDec)}</div></div>
+            <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan))), isDec)}</div></div>
           </div>
         `;
       }
@@ -617,7 +623,9 @@
 
     function renderTable() {
       const list = getTableData();
-      const qCol = TABS[currentTab].col;
+      const currentTabObj = TABS[currentTab];
+      const qCol = currentTabObj.col;
+      const isDec = currentTabObj.isDecimal;
       const tbody = document.getElementById('table-body');
 
       if (list.length === 0) {
@@ -635,7 +643,7 @@
             <td class="col-expand" title="${d.Du_An}">${d.Du_An}</td>
             <td class="col-expand" title="${d.Quy_Cach}">${d.Quy_Cach}</td>
             <td>${d.DVT}</td>
-            <td style="font-weight:800; color:#0b3d91;">${fmtSmart(d[qCol] || 0)}</td>
+            <td style="font-weight:800; color:#0b3d91;">${fmtSmart(d[qCol] || 0, isDec)}</td>
             <td class="${cb.cls}">${cb.text}</td>
             <td>${d.Trang_Thai_SX}</td>
             <td>${fmtDate(d.Ngay_Duyet_AB)}</td>
@@ -649,10 +657,12 @@
 
     function exportExcel() {
       const list = getTableData();
-      const qCol = TABS[currentTab].col;
+      const currentTabObj = TABS[currentTab];
+      const qCol = currentTabObj.col;
+      const isDec = currentTabObj.isDecimal;
       const exportRows = list.map(d => ({
         "Mã ĐH": d.So_DH, "Bộ Phận": d.Bo_Phan_KD, "NVKD": d.NV_KD, "Dự Án": d.Du_An,
-        "Quy Cách": d.Quy_Cach, "ĐVT": d.DVT, "Số Lượng": d[qCol] || 0,
+        "Quy Cách": d.Quy_Cach, "ĐVT": d.DVT, "Số Lượng": isDec ? (d[qCol] || 0) : Math.round(d[qCol] || 0),
         "Cảnh Báo": calcCanhBao(d).text, "Trạng Thái": d.Trang_Thai_SX,
         "Duyệt Base SX": fmtDate(d.Ngay_Duyet_AB), "KD Cần Ngày Giao Hàng": fmtDate(d.Ngay_KD_Can_AC),
         "Chốt Tiến Độ": fmtDate(d.Ngay_Chot_AG), "Ngày Nhập Kho": fmtDate(d.Ngay_NhapKho_DT)
