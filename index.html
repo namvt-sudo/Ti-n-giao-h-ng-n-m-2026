@@ -698,7 +698,8 @@
     function parseData(rows) {
       rawData = [];
       let lastDH = '';
-      for (let r = 3; r < rows.length; r++) {
+      // BẮT ĐẦU ĐỌC CHUẨN TỪ HÀNG THỨ 5 TRỞ ĐI (r = 4) TRONG FILE GOOGLE SHEETS
+      for (let r = 4; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.length < 2) continue;
 
@@ -713,10 +714,10 @@
         let dept = String(row[4] || '').trim();
         if (!dept) dept = 'Bộ phận KD';
 
-        // CỘT G: Nhân viên KD (Giữ nguyên văn tuyệt đối tên)[cite: 1]
+        // CỘT G: Nhân viên KD (Giữ nguyên văn tuyệt đối tên từ Cột G, lọc bỏ từ khóa rác như PKD nếu có)[cite: 1]
         let empRaw = String(row[6] || '').trim();
         let emp = chuan_hoa_ten_nv(empRaw);
-        if (!emp) emp = 'Chung';
+        if (!emp || emp.toUpperCase() === 'PKD' || emp.toUpperCase() === 'VTTB') emp = 'Chung';
 
         let project = String(row[7] || '').trim();
         let spec = String(row[9] || '').trim();
@@ -800,7 +801,6 @@
       const sDept = document.getElementById('f-dept');
       sDept.innerHTML = `<option value="ALL">Tất cả bộ phận</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
 
-      // Nạp danh sách gợi ý nhân viên KD vào datalist (gộp toàn bộ các biến thể để gợi ý)
       const emps = [...new Set(rawData.map(d => d.NV_KD).filter(e => e && e !== 'Chung'))].sort();
       const datalistEmp = document.getElementById('nvkd-list');
       datalistEmp.innerHTML = emps.map(e => `<option value="${e}"></option>`).join('');
@@ -848,14 +848,19 @@
       const st = document.getElementById('f-status').value;
       const dept = document.getElementById('f-dept').value;
       
-      // TÌM KIẾM MỀM NVKD: Chuẩn hóa từ khóa gõ vào (bỏ dấu chấm và khoảng trắng để bắt trọn mọi biến thể: Mr. Biên, MR Biên, Mr.Biên...)
-      const empInput = document.getElementById('f-emp').value.trim().toLowerCase().replace(/[\.\s]/g, '');
+      const empInput = document.getElementById('f-emp').value.trim();
+      const empInputClean = empInput.toLowerCase().replace(/[\.\s]/g, '');
 
       let base = rawData.filter(d => {
         if (dept !== 'ALL' && d.Bo_Phan_KD !== dept) return false;
         if (empInput) {
-          let cleanEmpName = String(d.NV_KD || '').toLowerCase().replace(/[\.\s]/g, '');
-          if (!cleanEmpName.includes(empInput)) return false;
+          let dbVal = String(d.NV_KD || '').trim();
+          let dbValClean = dbVal.toLowerCase().replace(/[\.\s]/g, '');
+          
+          let isMatchExact = dbVal.toLowerCase() === empInput.toLowerCase();
+          let isMatchFuzzy = dbValClean.includes(empInputClean);
+
+          if (!isMatchExact && !isMatchFuzzy) return false;
         }
         return true;
       });
