@@ -10,24 +10,143 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Be Vietnam Pro', sans-serif !important; }
-    body { background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%); color: #0f172a; min-height: 100vh; padding: 12px 18px; font-size: 13px; }
+    body { background: #164e63; color: #0f172a; min-height: 100vh; padding: 12px 18px; font-size: 13px; }
 
-    #login-screen {
-      max-width: 380px; margin: 70px auto; background: #ffffff; padding: 26px 28px;
-      border-radius: 14px; border: 1.5px solid #bcd6ff; box-shadow: 0 6px 20px rgba(13,71,161,0.12); text-align: center;
+    /* ================= GIAO DIỆN ĐĂNG NHẬP MỚI ================= */
+    #login-wrapper {
+      min-height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-    .form-group { margin-bottom: 14px; text-align: left; }
-    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #0d47a1; margin-bottom: 5px; }
-    .form-control {
-      width: 100%; padding: 8px 12px; border: 1.5px solid #93b8f2; border-radius: 10px; font-size: 13.5px; outline: none; background: #fff;
+    .auth-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 360px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      padding: 32px 24px 24px;
+      text-align: center;
     }
-    .form-control:focus { border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.15); }
-    .btn-login {
-      width: 100%; padding: 11px; background: linear-gradient(90deg, #0d47a1, #1565c0);
-      color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 6px;
+    .auth-logo-box {
+      width: 150px;
+      margin: 0 auto 16px;
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    .btn-login:hover { opacity: 0.95; transform: translateY(-1px); }
+    .auth-logo-svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 2px;
+    }
+    .auth-logo-brand {
+      color: #0b459c;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      font-size: 13px;
+    }
+    .auth-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f2d59;
+      margin-bottom: 4px;
+    }
+    .auth-sub {
+      color: #64748b;
+      font-size: 12px;
+      margin-bottom: 18px;
+    }
+    .auth-toggle {
+      display: flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .auth-toggle button {
+      flex: 1;
+      padding: 8px 6px;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      background: transparent;
+      color: #64748b;
+      transition: 0.2s;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .auth-toggle button.active {
+      background: #ffffff;
+      color: #0b459c;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .auth-alert {
+      background: #fdeee9;
+      border: 1px solid #fbd3c8;
+      color: #b83232;
+      font-size: 11.5px;
+      line-height: 1.5;
+      padding: 8px 12px;
+      border-radius: 10px;
+      text-align: left;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .auth-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 12.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .auth-input:focus {
+      border-color: #0b459c;
+    }
+    .auth-submit-btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #173b6c 0%, #1f946b 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(23, 59, 108, 0.25);
+      margin-top: 4px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .auth-submit-btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+    .auth-footer {
+      margin-top: 18px;
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
 
+    /* ================= GIAO DIỆN DASHBOARD SAU KHI VÀO ================= */
     .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .update-badge {
       display: inline-block; font-size: 12.5px; font-weight: 700; color: #ffffff;
@@ -77,7 +196,6 @@
       box-shadow: 0 6px 16px rgba(13,71,161,0.35); transform: translateY(-2px); font-weight: 900;
     }
 
-    /* THANH CHỌN SẢN PHẨM KHÁC CON */
     .subproduct-bar {
       display: none; flex-wrap: wrap; gap: 6px; padding: 6px 12px; background: #e8f1ff;
       border-radius: 10px; border: 1.5px dashed #93b8f2; margin-bottom: 12px; align-items: center;
@@ -167,23 +285,47 @@
 </head>
 <body>
 
-  <!-- ĐĂNG NHẬP -->
-  <div id="login-screen">
-    <div class="main-title" style="font-size: 20px; display: inline-block; margin-bottom: 6px;">🛡️ VHIP - ĐĂNG NHẬP HỆ THỐNG</div>
-    <p style="color: #64748b; font-size: 12px; margin-bottom: 16px;">Nhập tài khoản chung của công ty để vào dashboard</p>
-    <div class="form-group">
-      <label>Tên đăng nhập</label>
-      <input type="text" id="login-user" class="form-control" placeholder="Tên đăng nhập">
+  <!-- KHỐI ĐĂNG NHẬP THEO MẪU MỚI -->
+  <div id="login-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo-box">
+        <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 15L85 35V65L50 85L15 65V35L50 15Z" stroke="#0052cc" stroke-width="6" fill="#f8fafc"/>
+          <path d="M50 15L50 85M15 35L85 65M15 65L85 35" stroke="#00c853" stroke-width="4"/>
+          <polygon points="50,30 70,42 70,58 50,70 30,58 30,42" fill="#0052cc" opacity="0.15"/>
+        </svg>
+        <span class="auth-logo-brand">VĨNH HƯNG<sup>®</sup></span>
+      </div>
+
+      <div class="auth-title">VHIP – Quản lý NVL</div>
+      <div class="auth-sub">Đăng nhập để tiếp tục</div>
+
+      <!-- Tab chọn Đăng nhập / Đăng ký -->
+      <div class="auth-toggle">
+        <button id="btn-mode-login" class="active" onclick="switchMode('login')">Đăng nhập</button>
+        <button id="btn-mode-reg" onclick="switchMode('reg')">Đăng ký tài khoản</button>
+      </div>
+
+      <!-- Khung thông báo lỗi / trạng thái -->
+      <div id="auth-alert" class="auth-alert"></div>
+
+      <!-- Form Đăng Nhập / Đăng Ký -->
+      <form class="auth-form" onsubmit="event.preventDefault(); handleAuthSubmit();">
+        <input type="text" id="auth-email" class="auth-input" placeholder="Email hoặc Tên đăng nhập" value="namvt@vinhhungjsc.com" required>
+        <input type="password" id="auth-password" class="auth-input" placeholder="Mật khẩu" required>
+        
+        <button type="submit" id="auth-submit-btn" class="auth-submit-btn">
+          🔒 <span id="auth-btn-text">Đăng nhập</span>
+        </button>
+      </form>
+
+      <div class="auth-footer" id="auth-footer-text">
+        Đăng nhập bằng Email + Mật khẩu.
+      </div>
     </div>
-    <div class="form-group">
-      <label>Mật khẩu</label>
-      <input type="password" id="login-pass" class="form-control" placeholder="Mật khẩu">
-    </div>
-    <div id="login-err" style="color: #d32f2f; font-size: 12px; font-weight: 700; margin-bottom: 10px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
-    <button class="btn-login" onclick="handleLogin()">Đăng Nhập</button>
   </div>
 
-  <!-- DASHBOARD -->
+  <!-- DASHBOARD QUẢN LÝ TIẾN ĐỘ -->
   <div id="app" style="display: none;">
     <div class="top-bar">
       <div class="update-badge" id="update-badge">🔄 Đang tải dữ liệu...</div>
@@ -289,11 +431,80 @@
   <div id="loading" style="display: none;">Đang kết nối dữ liệu từ Google Sheets, vui lòng đợi...</div>
 
   <script>
+    /* ================= LOGIC XỬ LÝ AUTH MỚI ================= */
+    let currentAuthMode = 'login';
+
+    function switchMode(mode) {
+      currentAuthMode = mode;
+      const btnLogin = document.getElementById('btn-mode-login');
+      const btnReg = document.getElementById('btn-mode-reg');
+      const submitText = document.getElementById('auth-btn-text');
+      const alertBox = document.getElementById('auth-alert');
+      alertBox.style.display = 'none';
+
+      if (mode === 'login') {
+        btnLogin.classList.add('active');
+        btnReg.classList.remove('active');
+        submitText.innerText = 'Đăng nhập';
+        document.getElementById('auth-footer-text').innerText = 'Đăng nhập bằng Email + Mật khẩu.';
+      } else {
+        btnReg.classList.add('active');
+        btnLogin.classList.remove('active');
+        submitText.innerText = 'Tạo tài khoản';
+        document.getElementById('auth-footer-text').innerText = 'Hệ thống sẽ gửi yêu cầu phê duyệt tới Quản trị viên.';
+      }
+    }
+
+    function showAlert(msg) {
+      const alertBox = document.getElementById('auth-alert');
+      alertBox.innerText = msg;
+      alertBox.style.display = 'block';
+    }
+
+    function handleAuthSubmit() {
+      const u = document.getElementById('auth-email').value.trim();
+      const p = document.getElementById('auth-password').value.trim();
+
+      if (currentAuthMode === 'reg') {
+        showAlert("Đăng ký thành công! Vui lòng xác thực email và chờ Quản trị viên phê duyệt.");
+        return;
+      }
+
+      // Giữ tài khoản demo cũ (VHIP/1) và thêm tài khoản theo ảnh (namvt@vinhhungjsc.com/123456)
+      if ((u === "VHIP" && p === "1") || (u === "namvt@vinhhungjsc.com" && p === "123456")) {
+        sessionStorage.setItem('vhip_logged_in', 'true');
+        showApp();
+      } else if (u.includes("@") && p !== "") {
+        // Mô phỏng đúng thông báo tài khoản đang chờ duyệt theo ảnh
+        showAlert("Tài khoản đã xác thực email và đang chờ quản trị viên phê duyệt.");
+      } else {
+        showAlert("Tên đăng nhập hoặc mật khẩu không chính xác!");
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('vhip_logged_in');
+      location.reload();
+    }
+
+    function showApp() {
+      document.body.style.background = "linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%)";
+      document.getElementById('login-wrapper').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      buildTabs();
+      fetchData();
+    }
+
+    if (sessionStorage.getItem('vhip_logged_in') === 'true') {
+      showApp();
+    }
+
+    /* ================= LOGIC DỮ LIỆU & DASHBOARD GỐC ================= */
     const GGS_CSV_URL = "https://docs.google.com/spreadsheets/d/1Wewl_WwSYLR0ydq71vtHJC82ndk4EjqcNMqSVNvsByw/export?format=csv&gid=984933238";
     let rawData = [];
     let currentTab = 0;
     let currentSubTab = 'MOI';
-    let currentSubProduct = 'ALL'; // Biến lưu lựa chọn chi tiết Sản Phẩm Khác
+    let currentSubProduct = 'ALL';
 
     const TABS = [
       { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH", isDecimal: false },
@@ -305,29 +516,6 @@
       { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac", isDecimal: false }
     ];
 
-    if (sessionStorage.getItem('vhip_logged_in') === 'true') showApp();
-
-    function handleLogin() {
-      const u = document.getElementById('login-user').value.trim();
-      const p = document.getElementById('login-pass').value.trim();
-      if (u === "VHIP" && p === "1") {
-        sessionStorage.setItem('vhip_logged_in', 'true');
-        showApp();
-      } else {
-        document.getElementById('login-err').style.display = 'block';
-      }
-    }
-    function handleLogout() {
-      sessionStorage.removeItem('vhip_logged_in');
-      location.reload();
-    }
-    function showApp() {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      buildTabs();
-      fetchData();
-    }
-
     function buildTabs() {
       const container = document.getElementById('product-tabs');
       container.innerHTML = TABS.map((t, idx) => `
@@ -338,7 +526,6 @@
     function setTab(idx) {
       currentTab = idx;
       buildTabs();
-      // Hiện thanh chọn con nếu chọn Tab Sản Phẩm Khác
       const subBar = document.getElementById('subproduct-bar');
       if (TABS[idx].name === "📋 Sản Phẩm Khác") {
         subBar.style.display = 'flex';
@@ -363,7 +550,6 @@
       renderTable();
     }
 
-    // BỘ ĐỌC CSV NGUYÊN BẢN CHUẨN RFC-4180
     function parseCSVText(text) {
       let p = '', c = '', r = [];
       let q = false;
@@ -565,7 +751,6 @@
 
     let filteredMoi = [], filteredTon = [], filteredDone = [], filteredChuaChot = [];
 
-    // XÁC ĐỊNH CỘT SỐ LƯỢNG ĐANG CHỌN
     function getActiveCol() {
       if (TABS[currentTab].name === "📋 Sản Phẩm Khác" && currentSubProduct !== 'ALL') {
         return currentSubProduct;
