@@ -5,169 +5,167 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VHIP - Quản Lý Tiến Độ & Sản Lượng</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Be Vietnam Pro', sans-serif; }
-    body { background: linear-gradient(180deg, #eef4ff 0%, #f7faff 35%, #ffffff 100%); color: #0f172a; min-height: 100vh; padding: 10px 14px; font-size: 13px; }
+    :root {
+      --primary: #1565c0;
+      --primary-dark: #0d47a1;
+      --primary-light: #e3f2fd;
+      --bg: #f4f7fc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-sub: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; padding: 14px 20px; font-size: 13px; }
 
     /* Màn hình đăng nhập */
     #login-screen {
-      max-width: 380px; margin: 70px auto; background: #fff; padding: 24px 28px;
-      border-radius: 14px; border: 1.5px solid #bcd6ff; box-shadow: 0 6px 20px rgba(13,71,161,0.1); text-align: center;
+      max-width: 360px; margin: 90px auto; background: var(--card-bg); padding: 28px;
+      border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.06); text-align: center;
     }
     .form-group { margin-bottom: 14px; text-align: left; }
-    .form-group label { display: block; font-size: 12.5px; font-weight: 700; color: #0d47a1; margin-bottom: 5px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--primary-dark); margin-bottom: 5px; }
     .form-control {
-      width: 100%; padding: 8px 12px; border: 1.5px solid #93b8f2; border-radius: 9px; font-size: 13px; outline: none;
+      width: 100%; padding: 9px 13px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; outline: none; transition: 0.2s;
     }
-    .form-control:focus { border-color: #0d47a1; box-shadow: 0 0 0 3px rgba(13,71,161,0.12); }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,101,192,0.12); }
     .btn-login {
-      width: 100%; padding: 10px; background: linear-gradient(90deg, #0d47a1, #1565c0);
-      color: #fff; border: none; border-radius: 9px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 6px;
+      width: 100%; padding: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 6px;
     }
     .btn-login:hover { opacity: 0.95; transform: translateY(-1px); }
 
+    /* Container bao toàn bộ giao diện */
+    .app-container { max-width: 1360px; margin: 0 auto; }
+
     /* Top bar */
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .update-badge {
-      display: inline-block; font-size: 12px; font-weight: 700; color: #ffffff;
-      background: linear-gradient(90deg, #1e88e5, #00acc1); padding: 3px 12px; border-radius: 20px; box-shadow: 0 2px 6px rgba(30,136,229,0.3);
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #0369a1;
+      background: #e0f2fe; padding: 4px 14px; border-radius: 20px; border: 1px solid #bae6fd;
     }
     .btn-action {
-      background: #fff; border: 1.5px solid #93b8f2; padding: 4px 12px; border-radius: 8px;
-      color: #0d47a1; font-weight: 700; cursor: pointer; font-size: 12px; transition: 0.15s;
+      background: var(--card-bg); border: 1px solid #cbd5e1; padding: 5px 13px; border-radius: 8px;
+      color: var(--text-main); font-weight: 600; cursor: pointer; font-size: 12px; transition: 0.15s;
     }
-    .btn-action:hover { background: #eef5ff; }
+    .btn-action:hover { background: #f8fafc; border-color: #94a3b8; }
 
-    /* Main Title */
+    /* Header Title */
     .main-title {
-      background: linear-gradient(90deg, #0d47a1 0%, #1565c0 45%, #00b4d8 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      font-size: 21px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;
-      margin-bottom: 8px; padding-bottom: 4px; border-bottom: 3px solid #0d47a1;
+      font-size: 20px; font-weight: 800; color: var(--primary-dark);
+      letter-spacing: -0.3px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
     }
 
     /* Bộ lọc */
-    .filter-box {
-      background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
-      border: 1.5px solid #bcd6ff; border-radius: 12px; box-shadow: 0 3px 10px rgba(13,71,161,0.06); padding: 8px 12px; margin-bottom: 10px;
+    .filter-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02); padding: 10px 16px; margin-bottom: 12px;
     }
-    .filter-title { color: #0d47a1; font-size: 14px; font-weight: 800; margin-bottom: 6px; }
-    .filter-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-    @media (max-width: 1024px) {
-      .filter-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 600px) {
-      .filter-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    .filter-chip-label {
-      display: inline-block; background: #e7f0ff; border: 1px solid #b9d4ff; border-left: 3px solid #1565c0;
-      border-radius: 5px; padding: 2px 6px; margin-bottom: 3px; color: #0d47a1; font-weight: 800; font-size: 11px;
-    }
+    .filter-card-header { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    @media (max-width: 1024px) { .filter-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px) { .filter-grid { grid-template-columns: repeat(2, 1fr); } }
+    .filter-label { font-size: 11px; font-weight: 700; color: var(--text-sub); margin-bottom: 3px; display: block; }
     select.filter-select {
-      width: 100%; padding: 5px 8px; border-radius: 8px; border: 1.5px solid #93b8f2;
-      background: #fff; font-size: 12px; font-weight: 600; color: #0d47a1; outline: none; cursor: pointer;
+      width: 100%; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1;
+      background: #fff; font-size: 12px; font-weight: 600; color: var(--text-main); outline: none; cursor: pointer;
     }
+    select.filter-select:focus { border-color: var(--primary); }
 
     /* Danh mục Tab sản phẩm */
-    .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
     .tab-btn {
-      background: linear-gradient(135deg, #ffffff, #f2f7ff); border: 1.5px solid #93b8f2;
-      border-radius: 10px; padding: 6px 12px; color: #0d47a1; font-weight: 800; font-size: 12.5px; cursor: pointer; transition: 0.15s;
+      background: var(--card-bg); border: 1px solid #cbd5e1;
+      border-radius: 9px; padding: 7px 14px; color: var(--text-main); font-weight: 700; font-size: 12.5px; cursor: pointer; transition: 0.15s;
     }
+    .tab-btn:hover { background: #f1f5f9; }
     .tab-btn.active {
-      background: linear-gradient(120deg, #0d47a1, #1565c0 55%, #00b4d8); color: #fff; border-color: #0d47a1; transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(13,71,161,0.25);
+      background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 4px 10px rgba(21,101,192,0.25);
     }
 
-    /* ================= KHỐI THẺ METRIC GỌN GÀNG (CHUẨN 2 HÀNG x 3 CỘT) ================= */
-    .metric-wrapper {
-      margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;
+    /* ================= KHỐI METRICS GỌN GÀNG, SANG TRỌNG ================= */
+    .metric-section {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
-    .metric-row {
-      display: grid; gap: 8px;
+    .metric-grid-container {
+      display: flex; flex-direction: column; gap: 8px; max-width: 980px; margin: 0 auto;
     }
-    .metric-row.cols-3 {
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .metric-row.cols-4 {
-      grid-template-columns: repeat(4, 1fr);
-    }
-    @media (max-width: 768px) {
-      .metric-row.cols-3, .metric-row.cols-4 { grid-template-columns: repeat(2, 1fr); }
-    }
+    .metric-row { display: flex; gap: 10px; justify-content: center; }
     .metric-card {
-      background: linear-gradient(145deg, #ffffff 0%, #eef5ff 60%, #d8edff 100%);
-      padding: 6px 10px; border-radius: 10px; border-left: 4px solid #1976d2; box-shadow: 0 2px 7px rgba(13,71,161,0.1);
-      text-align: center; max-width: 230px; margin: 0 auto; width: 100%; transition: 0.15s;
+      flex: 1; max-width: 280px; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 10px; padding: 8px 12px; text-align: center; transition: 0.2s;
     }
-    .metric-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,71,161,0.16); }
+    .metric-card:hover { transform: translateY(-1px); border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
     .metric-label {
-      color: #0d47a1; font-weight: 800; font-size: 11.5px; margin-bottom: 2px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 11.5px; font-weight: 700; color: var(--text-sub); margin-bottom: 2px;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
     }
     .metric-value {
-      color: #0b3d91; font-weight: 900; font-size: 20px; letter-spacing: -0.2px; line-height: 1.2;
+      font-size: 20px; font-weight: 800; color: var(--primary-dark); letter-spacing: -0.4px; line-height: 1.2;
     }
 
-    .divider { height: 1px; background: linear-gradient(90deg, transparent, #b9d4ff, transparent); margin: 8px 0; border: none; }
-
-    /* Sub Tabs & Công cụ */
-    .sub-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    /* Thanh công cụ phụ */
+    .sub-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .sub-tabs { display: flex; gap: 6px; }
     .sub-tab-btn {
-      padding: 5px 12px; border-radius: 7px; border: 1px solid #bcd6ff; background: #fff;
-      font-weight: 700; font-size: 12px; color: #0d47a1; cursor: pointer;
+      padding: 5px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: var(--card-bg);
+      font-weight: 700; font-size: 12px; color: var(--text-sub); cursor: pointer; transition: 0.15s;
     }
-    .sub-tab-btn.active { background: #0d47a1; color: #fff; border-color: #0d47a1; }
+    .sub-tab-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
     .actions-wrap { display: flex; gap: 8px; align-items: center; }
     .search-box {
-      border: 1.5px solid #93b8f2; border-radius: 16px; padding: 4px 12px; font-size: 12px; width: 200px; outline: none;
+      border: 1.5px solid #cbd5e1; border-radius: 20px; padding: 5px 14px; font-size: 12.5px; width: 210px; outline: none;
     }
+    .search-box:focus { border-color: var(--primary); }
     .btn-export {
-      background: linear-gradient(90deg, #0d47a1, #00b4d8); color: #fff; font-weight: 800;
-      font-size: 12px; border: none; padding: 5px 14px; border-radius: 16px; cursor: pointer; transition: 0.15s;
+      background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 700;
+      font-size: 12px; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: 0.15s;
     }
-    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,180,216,0.35); }
+    .btn-export:hover { opacity: 0.95; transform: translateY(-1px); }
 
     /* Bảng dữ liệu */
     .table-container {
-      max-height: 480px; overflow: auto; border-radius: 10px; border: 1px solid #cfe0ff;
-      box-shadow: 0 3px 10px rgba(13,71,161,0.08); background: #fff;
+      max-height: 480px; overflow: auto; border-radius: 12px; border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03); background: #fff;
     }
     table { width: 100%; border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
     thead th {
-      position: sticky; top: 0; background: linear-gradient(90deg, #0d47a1, #1565c0 55%, #0d47a1);
-      color: #fff; font-weight: 800; padding: 7px 10px; text-align: center; border-bottom: 2px solid #08306b; z-index: 2; font-size: 12px;
+      position: sticky; top: 0; background: #0f172a; color: #f8fafc; font-weight: 700;
+      padding: 8px 12px; text-align: center; z-index: 2; font-size: 12px;
     }
-    tbody td { padding: 6px 10px; border-bottom: 1px solid #e6edf7; text-align: center; }
-    tbody tr:nth-child(even) td { background-color: #f7faff; }
-    tbody tr:hover td { background-color: #e3f0ff; }
+    tbody td { padding: 7px 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+    tbody tr:nth-child(even) td { background-color: #fbfcfe; }
+    tbody tr:hover td { background-color: #f1f5f9; }
     
     td.col-expand {
       max-width: 170px; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
     }
     td.col-expand:hover {
-      white-space: normal; overflow: visible; background-color: #fff9c4 !important; color: #0d47a1; font-weight: 600;
+      white-space: normal; overflow: visible; background-color: #fef9c3 !important; color: #854d0e; font-weight: 600;
     }
 
-    .cb-red { background-color: #ffc9c9 !important; color: #900C3F; font-weight: bold; }
-    .cb-orange { background-color: #ffe5b4 !important; color: #d35400; font-weight: bold; }
-    .cb-yellow { background-color: #fff9c4 !important; color: #856404; }
-    .cb-green { background-color: #d4edda !important; color: #155724; }
-    .cb-gray { background-color: #e9ecef !important; color: #6c757d; }
+    .cb-red { background-color: #fee2e2 !important; color: #991b1b; font-weight: 700; }
+    .cb-orange { background-color: #ffedd5 !important; color: #9a3412; font-weight: 700; }
+    .cb-yellow { background-color: #fef9c3 !important; color: #854d0e; }
+    .cb-green { background-color: #dcfce7 !important; color: #166534; }
+    .cb-gray { background-color: #f1f5f9 !important; color: #475569; }
 
-    #loading { text-align: center; padding: 30px; font-weight: 700; color: #0d47a1; font-size: 14px; }
+    #loading { text-align: center; padding: 40px; font-weight: 700; color: var(--primary); font-size: 14px; }
   </style>
 </head>
 <body>
 
-  <!-- MÀN HÌNH ĐĂNG NHẬP -->
+  <!-- ĐĂNG NHẬP -->
   <div id="login-screen">
-    <h3 style="color: #0d47a1; margin-bottom: 6px;">🛡️ VHIP - ĐĂNG NHẬP</h3>
-    <p style="color: #64748b; font-size: 12px; margin-bottom: 16px;">Nhập tài khoản công ty để truy cập Dashboard</p>
+    <div style="font-size: 28px; margin-bottom: 6px;">🛡️</div>
+    <h3 style="color: var(--text-main); margin-bottom: 4px; font-weight: 800;">VHIP Quản Lý</h3>
+    <p style="color: var(--text-sub); font-size: 12px; margin-bottom: 18px;">Nhập tài khoản để truy cập hệ thống</p>
     <div class="form-group">
       <label>Tên đăng nhập</label>
       <input type="text" id="login-user" class="form-control" placeholder="Tên đăng nhập">
@@ -176,32 +174,32 @@
       <label>Mật khẩu</label>
       <input type="password" id="login-pass" class="form-control" placeholder="Mật khẩu">
     </div>
-    <div id="login-err" style="color: #d32f2f; font-size: 12px; font-weight: 600; margin-bottom: 10px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
+    <div id="login-err" style="color: #ef4444; font-size: 12px; font-weight: 600; margin-bottom: 10px; display: none;">Sai tên đăng nhập hoặc mật khẩu!</div>
     <button class="btn-login" onclick="handleLogin()">Đăng Nhập</button>
   </div>
 
-  <!-- DASHBOARD CHÍNH -->
-  <div id="app" style="display: none;">
+  <!-- DASHBOARD -->
+  <div class="app-container" id="app" style="display: none;">
     <div class="top-bar">
       <div class="update-badge" id="update-badge">🔄 Đang tải...</div>
       <div>
-        <button class="btn-action" onclick="fetchData()">⚡ Làm Mới Ngay</button>
+        <button class="btn-action" onclick="fetchData()">⚡ Làm Mới</button>
         <button class="btn-action" onclick="handleLogout()" style="margin-left: 4px;">🚪 Đăng Xuất</button>
       </div>
     </div>
 
-    <div class="main-title">🛡️ VHIP - QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>
+    <div class="main-title">🛡️ VHIP — QUẢN LÝ TIẾN ĐỘ & SẢN LƯỢNG NĂM 2026</div>
 
     <!-- BỘ LỌC -->
-    <div class="filter-box">
-      <div class="filter-title">🎯 Bộ Lọc Tiến Độ Sản Xuất & Sản Lượng</div>
+    <div class="filter-card">
+      <div class="filter-card-header">🎯 Bộ Lọc Tiến Độ & Sản Lượng</div>
       <div class="filter-grid">
         <div>
-          <span class="filter-chip-label">📅 Chọn Năm</span>
+          <span class="filter-label">📅 Năm</span>
           <select id="f-year" class="filter-select" onchange="render()"><option value="ALL">Tất cả các năm</option><option value="2026" selected>2026</option></select>
         </div>
         <div>
-          <span class="filter-chip-label">⏱️ Kỳ Báo Cáo</span>
+          <span class="filter-label">⏱️ Kỳ</span>
           <select id="f-period" class="filter-select" onchange="onPeriodChange()">
             <option value="YEAR" selected>Cả Năm</option>
             <option value="MONTH">Theo Tháng</option>
@@ -209,20 +207,20 @@
           </select>
         </div>
         <div>
-          <span class="filter-chip-label">🗓️ Chi Tiết Kỳ</span>
+          <span class="filter-label">🗓️ Chi Tiết</span>
           <select id="f-subperiod" class="filter-select" onchange="render()" disabled><option value="ALL">Tất cả (Cả năm)</option></select>
         </div>
         <div>
-          <span class="filter-chip-label">🏭 Tình Trạng SX</span>
-          <select id="f-status" class="filter-select" onchange="render()"><option value="ALL">Tất cả tình trạng</option></select>
+          <span class="filter-label">🏭 Tình Trạng SX</span>
+          <select id="f-status" class="filter-select" onchange="render()"><option value="ALL">Tất cả</option></select>
         </div>
         <div>
-          <span class="filter-chip-label">🏢 Bộ Phận KD</span>
-          <select id="f-dept" class="filter-select" onchange="onDeptChange()"><option value="ALL">Tất cả bộ phận</option></select>
+          <span class="filter-label">🏢 Bộ Phận KD</span>
+          <select id="f-dept" class="filter-select" onchange="onDeptChange()"><option value="ALL">Tất cả</option></select>
         </div>
         <div>
-          <span class="filter-chip-label">👤 Nhân Viên KD</span>
-          <select id="f-emp" class="filter-select" onchange="render()"><option value="ALL">Tất cả NVKD</option></select>
+          <span class="filter-label">👤 NVKD</span>
+          <select id="f-emp" class="filter-select" onchange="render()"><option value="ALL">Tất cả</option></select>
         </div>
       </div>
     </div>
@@ -230,10 +228,10 @@
     <!-- TABS SẢN PHẨM -->
     <div class="nav-tabs" id="product-tabs"></div>
 
-    <!-- METRICS (2 HÀNG GỌN GÀNG) -->
-    <div class="metric-wrapper" id="metrics-container"></div>
-
-    <hr class="divider">
+    <!-- METRICS SECTION (CÂN ĐỐI GỌN GÀNG) -->
+    <div class="metric-section">
+      <div class="metric-grid-container" id="metrics-container"></div>
+    </div>
 
     <!-- SUB BAR & SEARCH -->
     <div class="sub-bar">
@@ -243,7 +241,7 @@
         <button class="sub-tab-btn" onclick="setSubTab('DONE')">✅ Đơn Đã Nhập Kho</button>
       </div>
       <div class="actions-wrap">
-        <input type="text" id="search-kw" class="search-box" placeholder="🔍 Nhập Mã ĐH, Dự án..." oninput="renderTable()">
+        <input type="text" id="search-kw" class="search-box" placeholder="🔍 Tìm Mã ĐH, Dự án..." oninput="renderTable()">
         <button class="btn-export" onclick="exportExcel()">📥 Xuất Excel</button>
       </div>
     </div>
@@ -260,12 +258,12 @@
             <th>Quy Cách</th>
             <th>ĐVT</th>
             <th>Số Lượng</th>
-            <th>🚨 Cảnh Báo Tiến Độ</th>
+            <th>🚨 Cảnh Báo</th>
             <th>Trạng Thái</th>
-            <th>Duyệt Base SX</th>
-            <th>KD Cần Ngày Giao Hàng</th>
-            <th>Chốt Tiến Độ Giao Hàng VHIP-KD</th>
-            <th>Ngày Nhập Kho Thực Tế</th>
+            <th>Duyệt SX</th>
+            <th>KD Cần Giao</th>
+            <th>Chốt Tiến Độ</th>
+            <th>Nhập Kho Thực Tế</th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -424,11 +422,11 @@
     function populateFilterOptions() {
       const depts = [...new Set(rawData.map(d => d.Bo_Phan_KD).filter(Boolean))].sort();
       const sDept = document.getElementById('f-dept');
-      sDept.innerHTML = `<option value="ALL">Tất cả bộ phận</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+      sDept.innerHTML = `<option value="ALL">Tất cả</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
 
       const statuses = [...new Set(rawData.map(d => d.Trang_Thai_SX).filter(s => s && s.toLowerCase() !== 'vhip'))].sort();
       const sStatus = document.getElementById('f-status');
-      sStatus.innerHTML = `<option value="ALL">Tất cả tình trạng</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+      sStatus.innerHTML = `<option value="ALL">Tất cả</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
 
       onDeptChange();
     }
@@ -437,7 +435,7 @@
       const dept = document.getElementById('f-dept').value;
       const emps = [...new Set(rawData.filter(d => dept === 'ALL' || d.Bo_Phan_KD === dept).map(d => d.NV_KD).filter(Boolean))].sort();
       const sEmp = document.getElementById('f-emp');
-      sEmp.innerHTML = `<option value="ALL">Tất cả NVKD</option>` + emps.map(e => `<option value="${e}">${e}</option>`).join('');
+      sEmp.innerHTML = `<option value="ALL">Tất cả</option>` + emps.map(e => `<option value="${e}">${e}</option>`).join('');
       render();
     }
 
@@ -522,13 +520,13 @@
         subTabs.style.display = 'none';
         const sum = col => filteredChuaChot.reduce((a, b) => a + (b[col] || 0), 0);
         container.innerHTML = `
-          <div class="metric-row cols-4">
+          <div class="metric-row">
             <div class="metric-card"><div class="metric-label">📄 ĐH Chưa Chốt</div><div class="metric-value">${fmtSmart(filteredChuaChot.length)}</div></div>
             <div class="metric-card"><div class="metric-label">📦 Gối Chậu</div><div class="metric-value">${fmtSmart(sum('SL_GoiChau'))}</div></div>
             <div class="metric-card"><div class="metric-label">⚙️ Khe Răng</div><div class="metric-value">${fmtSmart(sum('SL_KheRangLuoc'))}</div></div>
             <div class="metric-card"><div class="metric-label">🧱 Tấm VCO</div><div class="metric-value">${fmtSmart(sum('SL_TamVCO'))}</div></div>
           </div>
-          <div class="metric-row cols-3">
+          <div class="metric-row">
             <div class="metric-card"><div class="metric-label">🏗️ Cột H (Phụ Kiện)</div><div class="metric-value">${fmtSmart(sum('SL_HeCotPhuKien'))}</div></div>
             <div class="metric-card"><div class="metric-label">📋 Sản Phẩm Khác</div><div class="metric-value">${fmtSmart(sum('SL_NhomKhac'))}</div></div>
             <div class="metric-card"><div class="metric-label">🎯 Tổng Cộng</div><div class="metric-value">${fmtSmart(sum('So_Luong_Tong_DH'))}</div></div>
@@ -548,12 +546,12 @@
         const tonDong = arr => arr.filter(d => !(d.Da_Nhap_Kho && d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT <= endDate));
 
         container.innerHTML = `
-          <div class="metric-row cols-3">
+          <div class="metric-row">
             <div class="metric-card"><div class="metric-label">📦 Đặt Mới</div><div class="metric-value">${fmtSmart(sumCol(subM))}</div></div>
             <div class="metric-card"><div class="metric-label">🔥 Đặt & Cần Giao</div><div class="metric-value">${fmtSmart(sumCol(moiCan))}</div></div>
             <div class="metric-card"><div class="metric-label">⏳ Tồn Lũy Kế</div><div class="metric-value">${fmtSmart(sumCol(tonCan))}</div></div>
           </div>
-          <div class="metric-row cols-3">
+          <div class="metric-row">
             <div class="metric-card"><div class="metric-label">🎯 Tổng Cần SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(moiCan)) + sumCol(khongTamDung(tonCan)))}</div></div>
             <div class="metric-card"><div class="metric-label">✅ Đã Nhập Kho</div><div class="metric-value">${fmtSmart(sumCol(subD))}</div></div>
             <div class="metric-card"><div class="metric-label">⚠️ Còn Phải SX</div><div class="metric-value">${fmtSmart(sumCol(khongTamDung(tonDong(moiCan))) + sumCol(khongTamDung(tonDong(tonCan))))}</div></div>
@@ -564,13 +562,13 @@
 
     function calcCanhBao(d) {
       if (d.Da_Nhap_Kho) return { text: "✅ Đã Hoàn Thành", cls: "cb-green" };
-      if (!d.Ngay_Duyet_AB) return { text: "⚪ Chưa Duyệt SX (AB trống)", cls: "cb-gray" };
-      if (!d.Ngay_Chot_AG) return { text: "⚠️ Thiếu Ngày Chốt AG", cls: "cb-yellow" };
+      if (!d.Ngay_Duyet_AB) return { text: "⚪ Chưa Duyệt SX", cls: "cb-gray" };
+      if (!d.Ngay_Chot_AG) return { text: "⚠️ Thiếu Ngày Chốt", cls: "cb-yellow" };
 
       const diffDays = Math.ceil((d.Ngay_Chot_AG - new Date()) / (1000 * 60 * 60 * 24));
       if (diffDays <= 5) return { text: "🔴 Rất Nguy Hiểm (≤ 5 Ngày)", cls: "cb-red" };
-      if (diffDays <= 7) return { text: "🟠 Cấp Bách / Ưu Tiên (6-7 Ngày)", cls: "cb-orange" };
-      if (diffDays <= 15) return { text: "🟡 Tiến Độ Bình Thường (8-15 Ngày)", cls: "cb-yellow" };
+      if (diffDays <= 7) return { text: "🟠 Cấp Bách (6-7 Ngày)", cls: "cb-orange" };
+      if (diffDays <= 15) return { text: "🟡 Bình Thường (8-15 Ngày)", cls: "cb-yellow" };
       if (diffDays <= 30) return { text: "🟢 An Toàn (16-30 Ngày)", cls: "cb-green" };
       return { text: "🔵 Rất An Toàn (> 30 Ngày)", cls: "" };
     }
@@ -604,7 +602,7 @@
       const tbody = document.getElementById('table-body');
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" style="padding: 20px; color: #64748b;">Không có dữ liệu phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="padding: 20px; color: var(--text-sub);">Không có dữ liệu phù hợp.</td></tr>`;
         return;
       }
 
@@ -612,7 +610,7 @@
         const cb = calcCanhBao(d);
         return `
           <tr>
-            <td style="font-weight:700; color:#0d47a1;">${d.So_DH}</td>
+            <td style="font-weight:700; color:var(--primary);">${d.So_DH}</td>
             <td>${d.Bo_Phan_KD}</td>
             <td>${d.NV_KD}</td>
             <td class="col-expand" title="${d.Du_An}">${d.Du_An}</td>
