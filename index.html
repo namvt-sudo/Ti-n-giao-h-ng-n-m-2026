@@ -187,10 +187,11 @@
       display: inline-block; background: linear-gradient(90deg, #e7f0ff, #ffffff); border: 1px solid #b9d4ff; border-left: 4px solid #1565c0;
       border-radius: 8px; padding: 3px 8px; margin-bottom: 4px; color: #0d47a1; font-weight: 800; font-size: 12px; box-shadow: 0 2px 6px rgba(13,71,161,0.06);
     }
-    select.filter-select {
+    select.filter-select, input.filter-input {
       width: 100%; padding: 6px 10px; border-radius: 10px; border: 1.5px solid #93b8f2;
       background: #ffffff; font-size: 12.5px; font-weight: 700; color: #0d47a1; outline: none; cursor: pointer; box-shadow: 0 1px 4px rgba(13,71,161,0.08);
     }
+    input.filter-input { cursor: text; }
 
     .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .tab-btn {
@@ -218,7 +219,7 @@
       background: #0d47a1; color: #ffffff; border-color: #0d47a1; box-shadow: 0 2px 6px rgba(13,71,161,0.25);
     }
 
-    /* ================= BỘ 6 THẺ CHỈ SỐ THEO ĐÚNG ẢNH MẪU ================= */
+    /* BỘ 6 THẺ CHỈ SỐ */
     .metric-wrapper {
       margin-bottom: 14px;
       display: flex;
@@ -395,8 +396,10 @@
           <select id="f-dept" class="filter-select" onchange="onDeptChange()"><option value="ALL">Tất cả bộ phận</option></select>
         </div>
         <div>
-          <span class="filter-chip-label">👤 Nhân Viên KD</span>
-          <select id="f-emp" class="filter-select" onchange="render()"><option value="ALL">Tất cả NVKD</option></select>
+          <span class="filter-chip-label">👤 Gõ / Chọn NVKD</span>
+          <!-- Ô TÌM KIẾM NHANH TÊN NVKD CÓ GỢI Ý AUTOCOMPLETE -->
+          <input list="nvkd-list" id="f-emp" class="filter-input" placeholder="🔍 Gõ tên hoặc chọn NVKD..." oninput="render()">
+          <datalist id="nvkd-list"></datalist>
         </div>
       </div>
     </div>
@@ -418,7 +421,7 @@
       <button class="subprod-chip" onclick="setSubProduct('SL_SPKhac')">SP Khác</button>
     </div>
 
-    <!-- BỘ 6 THẺ CHỈ SỐ CHUẨN DÒNG CHẢY (2 HÀNG X 3 CỘT) -->
+    <!-- BỘ 6 THẺ CHỈ SỐ -->
     <div class="metric-wrapper" id="metrics-container"></div>
 
     <hr class="divider">
@@ -432,7 +435,7 @@
       </div>
       <div class="actions-wrap">
         <input type="text" id="search-kw" class="search-box" placeholder="🔍 Nhập Mã ĐH, Dự án..." oninput="renderTable()">
-        <button class="btn-export" onclick="exportExcel()">📥 Xuất Excel</button>
+        <button class="btn-export" id="btn-export-text" onclick="exportExcel()">📥 Xuất Excel</button>
       </div>
     </div>
 
@@ -446,7 +449,7 @@
             <th>Dự Án</th>
             <th>Quy Cách</th>
             <th>ĐVT</th>
-            <th>Số Lượng</th>
+            <th id="th-soluong">Số Lượng</th>
             <th>🚨 Cảnh Báo Tiến Độ</th>
             <th>Trạng Thái</th>
             <th>Duyệt Base SX</th>
@@ -545,13 +548,13 @@
     let currentSubProduct = 'ALL';
 
     const TABS = [
-      { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH", isDecimal: false },
-      { name: "🚨 Chưa Chốt Tiến Độ Giao Hàng", col: "So_Luong_Tong_DH", isDecimal: false },
-      { name: "📦 Gối Chậu", col: "SL_GoiChau", isDecimal: false },
-      { name: "⚙️ Khe Răng Lược", col: "SL_KheRangLuoc", isDecimal: true },
-      { name: "🧱 Tấm VCO", col: "SL_TamVCO", isDecimal: false },
-      { name: "🏗️ Cột H (Phụ Kiện)", col: "SL_HeCotPhuKien", isDecimal: false },
-      { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac", isDecimal: false }
+      { name: "📊 Dashboard Tổng", col: "So_Luong_Tong_DH", label: "Tổng ĐH", isDecimal: false },
+      { name: "🚨 Chưa Chốt Tiến Độ Giao Hàng", col: "So_Luong_Tong_DH", label: "Tổng ĐH", isDecimal: false },
+      { name: "📦 Gối Chậu", col: "SL_GoiChau", label: "Gối Chậu", isDecimal: false },
+      { name: "⚙️ Khe Răng Lược", col: "SL_KheRangLuoc", label: "Khe Răng Lược", isDecimal: true },
+      { name: "🧱 Tấm VCO", col: "SL_TamVCO", label: "Tấm VCO", isDecimal: false },
+      { name: "🏗️ Cột H (Phụ Kiện)", col: "SL_HeCotPhuKien", label: "Cột H", isDecimal: false },
+      { name: "📋 Sản Phẩm Khác", col: "SL_NhomKhac", label: "SP Khác", isDecimal: false }
     ];
 
     function buildTabs() {
@@ -571,6 +574,15 @@
         subBar.style.display = 'none';
         currentSubProduct = 'ALL';
       }
+
+      // Cập nhật tiêu đề bảng theo sản phẩm đang chọn
+      const thSL = document.getElementById('th-soluong');
+      if (currentTab === 0 || currentTab === 1) {
+        thSL.innerText = "Tổng Số Lượng";
+      } else {
+        thSL.innerText = `SL ${TABS[currentTab].label}`;
+      }
+
       render();
     }
 
@@ -788,8 +800,10 @@
     function onDeptChange() {
       const dept = document.getElementById('f-dept').value;
       const emps = [...new Set(rawData.filter(d => dept === 'ALL' || d.Bo_Phan_KD === dept).map(d => d.NV_KD).filter(Boolean))].sort();
-      const sEmp = document.getElementById('f-emp');
-      sEmp.innerHTML = `<option value="ALL">Tất cả NVKD</option>` + emps.map(e => `<option value="${e}">${e}</option>`).join('');
+      
+      // Đổ danh sách vào datalist hỗ trợ tìm kiếm autocomplete
+      const datalistEmp = document.getElementById('nvkd-list');
+      datalistEmp.innerHTML = emps.map(e => `<option value="${e}"></option>`).join('');
       render();
     }
 
@@ -820,26 +834,17 @@
       return TABS[currentTab].col;
     }
 
-    /* =========================================================================
-       LOGIC CHUẨN 6 CHỈ SỐ:
-       1. Đặt Mới: Toàn bộ đơn phát sinh trong tháng/kỳ (biết tổng tháng này nhận bao nhiêu gối, khe)
-       2. Đặt & Cần Giao: Trong số đặt mới trên, những đơn KD yêu cầu giao ngay trong kỳ
-       3. Tồn Lũy Kế: Đơn các tháng trước gối sang mà KD yêu cầu giao kỳ này (hoặc quá hạn từ trước)
-       4. Tổng Cần SX = (Đặt & Cần Giao) + (Tồn Lũy Kế) [trừ đơn tạm dừng]
-       5. Đã Nhập Kho = Thực tế hoàn thành trong kỳ
-       6. Còn Phải SX = (Tổng Cần SX) - (Đã Nhập Kho) [nếu âm thì về 0]
-       ========================================================================= */
     function render() {
       const y = document.getElementById('f-year').value;
       const p = document.getElementById('f-period').value;
       const sub = document.getElementById('f-subperiod').value;
       const st = document.getElementById('f-status').value;
       const dept = document.getElementById('f-dept').value;
-      const emp = document.getElementById('f-emp').value;
+      const empInput = document.getElementById('f-emp').value.trim().toLowerCase();
 
       let base = rawData.filter(d => {
         if (dept !== 'ALL' && d.Bo_Phan_KD !== dept) return false;
-        if (emp !== 'ALL' && d.NV_KD !== emp) return false;
+        if (empInput && !d.NV_KD.toLowerCase().includes(empInput)) return false;
         return true;
       });
 
@@ -849,9 +854,9 @@
         labelKyDatMoi = "Đặt Mới (Tất Cả)";
         filteredMoi = base;
         filteredCanGiao = base;
-        filteredTon = base.filter(d => !d.Da_Nhap_Kho);
+        filteredTon = base.filter(d => !d.Da_Nhap_Kho && !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
         filteredDone = base.filter(d => d.Da_Nhap_Kho);
-        filteredChuaChot = base.filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho);
+        filteredChuaChot = base.filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho && !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
       } else {
         let yearEff = parseInt(y);
 
@@ -871,32 +876,33 @@
           labelKyDatMoi = `Đặt Mới Năm ${yearEff}`;
         }
 
-        // 1. ĐẶT MỚI: Tất cả đơn đặt hàng phát sinh trong kỳ (biết tổng tháng này nhận bao nhiêu)
+        // 1. ĐẶT MỚI: Đặt trong kỳ
         filteredMoi = base.filter(d => d.Ngay_DatHang && d.Ngay_DatHang >= currentStartDate && d.Ngay_DatHang <= currentEndDate);
 
-        // 2. ĐẶT & CẦN GIAO: Trong số Đặt Mới trên, có Ngày KD yêu cầu rơi vào kỳ này
+        // 2. ĐẶT & CẦN GIAO: Đặt trong kỳ VÀ Ngày KD yêu cầu rơi vào kỳ này
         filteredCanGiao = filteredMoi.filter(d => {
           let dYeuCau = d.Ngay_KD_Can_AC || d.Ngay_Chot_AG;
           if (!dYeuCau) return true;
           return (dYeuCau >= currentStartDate && dYeuCau <= currentEndDate);
         });
 
-        // 3. TỒN LŨY KẾ: Đơn đặt trước kỳ, chưa xong đầu kỳ VÀ Ngày KD yêu cầu <= cuối kỳ (đến hạn hoặc quá hạn dồn sang)
+        // 3. TỒN LŨY KẾ: Đặt trước kỳ, chưa xong, hẹn giao trong kỳ VÀ LOẠI TRÙ TẠM DỪNG
         filteredTon = base.filter(d => {
           let datTruocKy = d.Ngay_DatHang && d.Ngay_DatHang < currentStartDate;
           let chuaXongDauKy = !d.Da_Nhap_Kho || (d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= currentStartDate);
           if (!datTruocKy || !chuaXongDauKy) return false;
+          if (d.Trang_Thai_SX.toLowerCase().includes('tạm dừng')) return false;
 
           let dYeuCau = d.Ngay_KD_Can_AC || d.Ngay_Chot_AG;
-          if (!dYeuCau) return true;
-          return (dYeuCau <= currentEndDate);
+          if (!dYeuCau) return false;
+          return (dYeuCau >= currentStartDate && dYeuCau <= currentEndDate);
         });
 
-        // 4. ĐÃ NHẬP KHO: Nhập kho thực tế đúng trong kỳ
+        // 4. ĐÃ NHẬP KHO: Nhập kho trong kỳ
         filteredDone = base.filter(d => d.Ngay_NhapKho_DT && d.Ngay_NhapKho_DT >= currentStartDate && d.Ngay_NhapKho_DT <= currentEndDate);
 
-        // 5. CHƯA CHỐT
-        filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho);
+        // 5. CHƯA CHỐT: Không tính tạm dừng
+        filteredChuaChot = [...filteredMoi, ...filteredTon].filter(d => !d.Ngay_Chot_AG && !d.Da_Nhap_Kho && !d.Trang_Thai_SX.toLowerCase().includes('tạm dừng'));
       }
 
       if (st !== 'ALL') {
@@ -956,8 +962,7 @@
         let datVaCanGiao = sumCol(subCG);
         let tonLuyKe = sumCol(subT);
 
-        // Tổng cần SX = Đặt & Cần giao + Tồn lũy kế (bỏ đơn tạm dừng)
-        let tongCanSX = sumCol(khongTamDung(subCG)) + sumCol(khongTamDung(subT));
+        let tongCanSX = sumCol(khongTamDung(subCG)) + tonLuyKe;
         let daNhapKho = sumCol(subD);
         let conPhaiSX = (tongCanSX > daNhapKho) ? (tongCanSX - daNhapKho) : 0;
 
@@ -1025,6 +1030,8 @@
         else if (currentSubTab === 'CAN_GIAO') data = filteredCanGiao;
         else if (currentSubTab === 'TON') data = filteredTon;
         else data = filteredDone;
+
+        // Nếu ở tab sản phẩm cụ thể (Gối, Khe...), chỉ lấy dòng có sản lượng của sản phẩm đó
         if (currentTab !== 0) data = data.filter(d => (d[qCol] || 0) > 0);
       }
       const kw = document.getElementById('search-kw').value.trim().toLowerCase();
@@ -1066,21 +1073,36 @@
       }).join('');
     }
 
+    /* ================= XUẤT EXCEL CHUẨN XÁC THEO SẢN PHẨM ================= */
     function exportExcel() {
       const list = getTableData();
       const qCol = getActiveCol();
+      const currentTabObj = TABS[currentTab];
+      const tenColSL = (currentTab === 0 || currentTab === 1) ? "Số Lượng Tổng" : `SL ${currentTabObj.label}`;
+
       const exportRows = list.map(d => ({
-        "Mã ĐH": d.So_DH, "Bộ Phận": d.Bo_Phan_KD, "NVKD": d.NV_KD, "Dự Án": d.Du_An,
-        "Quy Cách": d.Quy_Cach, "ĐVT": d.DVT, "Số Lượng": d[qCol] || 0,
-        "Cảnh Báo": calcCanhBao(d).text, "Trạng Thái": d.Trang_Thai_SX,
-        "Duyệt Base SX": fmtDate(d.Ngay_Duyet_AB), "KD Cần Ngày Giao Hàng": fmtDate(d.Ngay_KD_Can_AC),
-        "Chốt Tiến Độ": fmtDate(d.Ngay_Chot_AG), "Ngày Nhập Kho": fmtDate(d.Ngay_NhapKho_DT)
+        "Mã ĐH": d.So_DH,
+        "Bộ Phận": d.Bo_Phan_KD,
+        "NVKD": d.NV_KD,
+        "Dự Án": d.Du_An,
+        "Quy Cách": d.Quy_Cach,
+        "ĐVT": d.DVT,
+        [tenColSL]: d[qCol] || 0,
+        "Cảnh Báo": calcCanhBao(d).text,
+        "Trạng Thái": d.Trang_Thai_SX,
+        "Duyệt Base SX": fmtDate(d.Ngay_Duyet_AB),
+        "KD Cần Ngày Giao Hàng": fmtDate(d.Ngay_KD_Can_AC),
+        "Chốt Tiến Độ": fmtDate(d.Ngay_Chot_AG),
+        "Ngày Nhập Kho": fmtDate(d.Ngay_NhapKho_DT)
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao");
-      XLSX.writeFile(wb, `Bao_Cao_${TABS[currentTab].name.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`);
+      
+      // Đặt tên file theo đúng tab sản phẩm đang mở
+      let safeName = currentTabObj.name.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
+      XLSX.writeFile(wb, `Bao_Cao_${safeName}.xlsx`);
     }
   </script>
 </body>
