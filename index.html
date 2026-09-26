@@ -675,6 +675,7 @@
       return ban_do[val_str.toLowerCase()] || val_str;
     }
 
+    // Làm sạch tên nhân sự từ cột G
     function chuan_hoa_ten_nv(ten) {
       if (!ten) return '';
       let s = String(ten).trim();
@@ -712,15 +713,10 @@
         let namCotD = String(row[3] || '').trim();
 
         let dept = String(row[4] || '').trim();
-        if (!dept || dept.toLowerCase() === 'chưa phân loại') {
-          let col5 = String(row[5] || '').trim();
-          if (/^PKD|^KD|^Phòng/i.test(col5)) {
-            dept = col5;
-          }
-        }
         if (!dept) dept = 'Bộ phận KD';
 
-        let empRaw = String(row[6] || row[5] || '').trim();
+        // NHÂN VIÊN KD LẤY CHUẨN TỪ CỘT G (row[6])
+        let empRaw = String(row[6] || '').trim();
         let emp = chuan_hoa_ten_nv(empRaw);
         if (!emp) emp = 'Chung';
 
