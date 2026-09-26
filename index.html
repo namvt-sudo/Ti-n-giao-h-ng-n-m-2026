@@ -675,12 +675,10 @@
       return ban_do[val_str.toLowerCase()] || val_str;
     }
 
-    // LẤY CHUẨN XÁC TÊN TỪ CỘT G (INDEX 6) VÀ BỎ TIỀN TỐ MR/MS
     function chuan_hoa_ten_nv(ten) {
       if (!ten) return '';
       let s = String(ten).trim();
-      s = s.replace(/^(mr\.?|ms\.?|mrs\.?)\s*/i, '');
-      return s.trim().replace(/\s+/g, ' ');
+      return s.replace(/\s+/g, ' ');
     }
 
     function parseDate(val) {
@@ -704,17 +702,18 @@
         const row = rows[r];
         if (!row || row.length < 2) continue;
 
-        let dh = String(row[1] || '').trim();
+        let dh = String(row[1] || '').trim(); // Cột B: Số ĐH
         if (dh) lastDH = dh; else dh = lastDH;
         if (!dh || /Tổng|Tong|STT|Số ĐH/i.test(dh)) continue;
 
-        let status = clean_status(row[2]);
-        let namCotD = String(row[3] || '').trim();
+        let status = clean_status(row[2]);    // Cột C: Tình trạng sản xuất
+        let namCotD = String(row[3] || '').trim(); // Cột D: Năm
 
+        // CỐ ĐỊNH CHÍNH XÁC CỘT E LÀ BỘ PHẬN KD
         let dept = String(row[4] || '').trim();
         if (!dept) dept = 'Bộ phận KD';
 
-        // LẤY TRỰC TIẾP CỘT G (row[6]) ĐÚNG NHƯ THỰC TẾ
+        // CỐ ĐỊNH CHÍNH XÁC CỘT G LÀ NHÂN VIÊN KD (Giữ nguyên văn tuyệt đối tên nhân sự)
         let empRaw = String(row[6] || '').trim();
         let emp = chuan_hoa_ten_nv(empRaw);
         if (!emp) emp = 'Chung';
